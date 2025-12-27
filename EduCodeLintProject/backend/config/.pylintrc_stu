@@ -1,7 +1,9 @@
 [MASTER]
+
 disable=all
 
 [MESSAGES CONTROL]
+
 enable=
     # 过长函数/方法
     too-many-lines,

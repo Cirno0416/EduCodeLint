@@ -1,0 +1,17 @@
+{
+  "typeCheckingMode": "basic",
+
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false,
+
+  "reportGeneralTypeIssues": true,
+  "reportOptionalMemberAccess": true,
+  "reportOptionalSubscript": true,
+  "reportOptionalCall": true,
+
+  "reportUndefinedVariable": true,
+  "reportUnboundVariable": true,
+
+  "reportRedeclaration": true,
+  "reportUnusedExpression": true
+}

@@ -2,15 +2,16 @@ import os
 
 from flask import Blueprint, request, jsonify
 
-from backend.services.pylint_service import run_pylint
+from backend.services.linter_service import run_linters
 
-upload_bp = Blueprint('upload', __name__)
+analyze_bp = Blueprint('upload', __name__)
 
 
-@upload_bp.route('/analyze/single', methods=['POST'])
+@analyze_bp.route('/analyze/single', methods=['POST'])
 def analyze_single():
     data = request.get_json()
     path = data.get('path')
+    exclude_tools = data.get('exclude_tools', [])
 
     if not path or not os.path.isfile(path):
         return jsonify({'error': 'Invalid file path'}), 400
@@ -18,27 +19,27 @@ def analyze_single():
     if not path.endswith('.py'):
         return jsonify({'error': 'Only .py files allowed'}), 400
 
-    pylint_results = run_pylint(path)
+    results = run_linters(path, exclude_tools)
 
     return jsonify({
         'filename': os.path.basename(path),
-        'tool': 'pylint',
-        'issue_count': len(pylint_results),
-        'issues': pylint_results
+        'issue_count': len(results),
+        'issues': results
     })
 
 
-@upload_bp.route('/analyze/multiple', methods=['POST'])
+@analyze_bp.route('/analyze/multiple', methods=['POST'])
 def analyze_multiple():
     data = request.get_json()
     paths = data.get('paths', [])
+    exclude_tools = data.get('exclude_tools', [])
     results = []
 
     for path in paths:
         if not path.endswith('.py') or not os.path.isfile(path):
             continue
 
-        issues = run_pylint(path)
+        issues = run_linters(path, exclude_tools)
 
         results.append({
             'filename': os.path.basename(path),
@@ -47,7 +48,6 @@ def analyze_multiple():
         })
 
     return jsonify({
-        'tool': 'pylint',
         'file_count': len(results),
         'results': results
     })

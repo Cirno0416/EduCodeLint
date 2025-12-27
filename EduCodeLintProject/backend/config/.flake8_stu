@@ -1,0 +1,38 @@
+[flake8]
+
+plugins=
+    # 注释/文档规范（PEP257）
+    flake8_docstrings,
+    # 代码异味（过长函数、深层嵌套）
+    flake8_bugbear,
+    # 圈复杂度
+    mccabe
+
+# 行长度≤79字符
+max-line-length=79
+
+extend-select=
+    N801,  # 类名非大驼峰（CamelCase）
+    N802,  # 函数名非蛇形（snack_case）
+    N803,  # 变量名非蛇形（snack_case）
+    N812   # 常量名非全大写
+    D100,  # 缺少模块Docstring
+    D101,  # 缺少类Docstring
+    D102,  # 缺少函数Docstring
+    D205   # Docstring格式不规范
+
+docstring-style=pep257
+
+# 兼容切片格式
+extend-ignore=E203
+
+# 圈复杂度阈值=10
+max-complexity=10
+
+# 过长函数：≤50语句
+bugbear-max-statements=50
+# 深层嵌套：≤3层
+bugbear-max-nested-blocks=3
+
+# 排除目录
+exclude=venv/,build/,.git/,__pycache__/
