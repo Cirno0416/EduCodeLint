@@ -8,6 +8,7 @@ PYLINT_CONFIG_PATH = '../config/.pylintrc_stu'
 BANDIT_CONFIG_PATH = '../config/bandit_stu.yml'
 FLAKE8_CONFIG_PATH = '../config/.flake8_stu'
 PYRIGHT_CONFIG_PATH = '../config/pyrightconfig_stu.json'
+PYDOCSTYLE_CONFIG_PATH = '../config/.pydocstyle_stu'
 
 ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
 
@@ -19,7 +20,8 @@ def run_linters(file_path: str, exclude_tools: list = None) -> dict:
         "flake8": run_flake8,
         "bandit": run_bandit,
         "radon": run_radon,
-        "pyright": run_pyright
+        "pyright": run_pyright,
+        "pydocstyle": run_pydocstyle,
     }
     results = {}
 
@@ -271,3 +273,73 @@ def run_pyright(file_path: str) -> list:
         print(f"Pyright JSON解析失败: {e}")
         print(f"Pyright 原始输出: {process.stdout}")
         return []
+
+
+def run_pydocstyle(file_path: str) -> list:
+    pydocstyle_config = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), PYDOCSTYLE_CONFIG_PATH)
+    )
+
+    if not os.path.exists(pydocstyle_config):
+        print(f"Pydocstyle 配置文件不存在: {pydocstyle_config}")
+        return []
+
+    cmd = [
+        'pydocstyle',
+        file_path,
+        '--config', pydocstyle_config
+    ]
+
+    process = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    if process.stderr:
+        print(f"Pydocstyle 错误输出: {process.stderr}")
+
+    if not process.stdout.strip():
+        print("Pydocstyle 无输出")
+        return []
+
+    results = []
+
+    # 示例输出：
+    # your_file.py:10 in public function `foo`:
+    #     D103: Missing docstring in public function
+    lines = process.stdout.splitlines()
+
+    current_file = None
+    current_line = None
+    current_object = None
+
+    for line in lines:
+        line = line.strip()
+        # 文件 + 行号
+
+        match = re.match(r"(.+?):(\d+)", line)
+        if match:
+            current_file = match.group(1)
+            current_line = int(match.group(2))
+            current_object = None
+            continue
+
+        # 错误码 + 描述
+        match = re.match(r"(D\d+):\s+(.*)", line)
+        if match:
+            code = match.group(1)
+            message = match.group(2)
+
+            results.append({
+                "type": "pydocstyle",
+                "code": code,
+                "file": current_file,
+                "line": current_line,
+                "object": current_object,
+                "message": message,
+                "severity": "warning"
+            })
+
+    return results

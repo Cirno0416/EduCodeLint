@@ -1,0 +1,12 @@
+[pydocstyle]
+select =
+    D100,
+    D400,
+    D205,
+    D415
+
+add-ignore =
+    D101,
+    D102,
+    D103,
+    D104
