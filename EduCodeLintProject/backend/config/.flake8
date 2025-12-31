@@ -1,0 +1,48 @@
+[flake8]
+
+# 启用的规则
+select =
+    C901,   # 复杂度
+
+    D100,   # 模块缺少 docstring
+    D205,   # Docstring 摘要与详细描述之间缺少空行
+
+    E201,	# 左括号后多余空格
+    E202,	# 右括号前多余空格
+    E225,	# 运算符缺少空格
+    E231,	# 缺少逗号后空格
+    E301,	# 缺少空行
+    E302,	# 函数/类前空行不足
+    E303,	# 空行过多
+    E305,	# 定义后缺少空行
+    E501,   # 行长度超过 max-line-length
+
+    W391,   # 文件末尾存在多余空行
+
+    F821,   # 使用未定义名称
+    F841,   # 局部变量赋值但未使用
+
+    N801,   # 类名不是 CamelCase
+    N802,   # 函数名不是 snake_case
+    N803,   # 参数名不是 snake_case
+    N806,   # 变量名不是 snake_case
+    N812    # 常量名非全大写
+
+# 行长度
+max-line-length=79
+
+# Docstring 规范
+docstring-convention = pep257
+
+# 复杂度阈值
+max-complexity = 10
+
+# 兼容 slicing
+extend-ignore = E203
+
+# 排除目录
+exclude =
+    venv,
+    build,
+    .git,
+    __pycache__,

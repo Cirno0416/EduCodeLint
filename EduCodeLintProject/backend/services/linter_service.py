@@ -2,26 +2,21 @@ import json
 import os
 import re
 import subprocess
+import logging
 
-
-PYLINT_CONFIG_PATH = '../config/.pylintrc_stu'
-BANDIT_CONFIG_PATH = '../config/bandit_stu.yml'
-FLAKE8_CONFIG_PATH = '../config/.flake8_stu'
-PYRIGHT_CONFIG_PATH = '../config/pyrightconfig_stu.json'
-PYDOCSTYLE_CONFIG_PATH = '../config/.pydocstyle_stu'
-
-ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+from backend.constants.config_path import ConfigPath
+from backend.constants.tool_name import ToolName
 
 
 def run_linters(file_path: str, exclude_tools: list = None) -> dict:
     exclude_tools = exclude_tools or []
     tool_mapping = {
-        "pylint": run_pylint,
-        "flake8": run_flake8,
-        "bandit": run_bandit,
-        "radon": run_radon,
-        "pyright": run_pyright,
-        "pydocstyle": run_pydocstyle,
+        ToolName.PYLINT: _run_pylint,
+        ToolName.FLAKE8: _run_flake8,
+        ToolName.BANDIT: _run_bandit,
+        ToolName.RADON: _run_radon,
+        ToolName.PYRIGHT: _run_pyright,
+        ToolName.PYDOCSTYLE: _run_pydocstyle
     }
     results = {}
 
@@ -40,19 +35,11 @@ def run_linters(file_path: str, exclude_tools: list = None) -> dict:
     return results
 
 
-def run_pylint(file_path: str) -> list:
-    pylint_config = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), PYLINT_CONFIG_PATH)
-    )
-
-    if not os.path.exists(pylint_config):
-        print(f"Pylint 配置文件不存在: {pylint_config}")
-        return []
-
+def _run_pylint(file_path: str) -> list:
     cmd = [
-        'pylint',
+        ToolName.PYLINT,
         file_path,
-        f'--rcfile={pylint_config}',
+        f'--rcfile={ConfigPath.PYLINT_CONFIG}',
         '--output-format=json',
         '--score=no'
     ]
@@ -65,33 +52,25 @@ def run_pylint(file_path: str) -> list:
     )
 
     if process.stderr:
-        print(f"Pylint 错误输出: {process.stderr}")
+        logging.error(f"Pylint 错误输出: {process.stderr}")
         return []
 
     if not process.stdout.strip():
-        print("Pylint 无输出")
+        logging.info("Pylint 无输出")
         return []
 
     try:
         return json.loads(process.stdout)
     except json.JSONDecodeError as e:
-        print(f"Pylint JSON解析失败: {e}")
+        logging.error(f"Pylint JSON解析失败: {e}")
         return []
 
 
-def run_flake8(file_path: str) -> list:
-    flake8_config = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), FLAKE8_CONFIG_PATH)
-    )
-
-    if not os.path.exists(flake8_config):
-        print(f"Flake8 配置文件不存在: {flake8_config}")
-        return []
-
+def _run_flake8(file_path: str) -> list:
     cmd = [
-        'flake8',
+        ToolName.FLAKE8,
         file_path,
-        f'--config={flake8_config}',
+        f'--config={ConfigPath.FLAKE8_CONFIG}',
         '--format=json',
         '--exit-zero'
     ]
@@ -104,32 +83,24 @@ def run_flake8(file_path: str) -> list:
     )
 
     if process.stderr:
-        print(f"Flake8 错误输出: {process.stderr}")
+        logging.error(f"Flake8 错误输出: {process.stderr}")
 
     if not process.stdout.strip():
-        print("Flake8 无输出")
+        logging.info("Flake8 无输出")
         return []
 
     try:
         return json.loads(process.stdout)
     except json.JSONDecodeError as e:
-        print(f"Flake8 JSON解析失败: {e}")
+        logging.error(f"Flake8 JSON解析失败: {e}")
         return []
 
 
-def run_bandit(file_path: str) -> list:
-    bandit_config = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), BANDIT_CONFIG_PATH)
-    )
-
-    if not os.path.exists(bandit_config):
-        print(f"Bandit 配置文件不存在: {bandit_config}")
-        return []
-
+def _run_bandit(file_path: str) -> list:
     cmd = [
-        'bandit',
+        ToolName.BANDIT,
         file_path,
-        '-c', bandit_config,
+        '-c', ConfigPath.BANDIT_CONFIG,
         '-f', 'json',
         '-o', '-',
         '--quiet'
@@ -143,11 +114,10 @@ def run_bandit(file_path: str) -> list:
     )
 
     if process.stderr:
-        print(f"Bandit 错误输出: {process.stderr}")
+        logging.error(f"Bandit 错误输出: {process.stderr}")
 
     if not process.stdout.strip():
-        print("Bandit 无输出")
-        print(f"Bandit stdout 原始内容: {repr(process.stdout)}")
+        logging.info("Bandit 无输出")
         return []
 
     try:
@@ -155,18 +125,17 @@ def run_bandit(file_path: str) -> list:
         result = json.loads(process.stdout)
         return result.get('results', [])
     except json.JSONDecodeError as e:
-        print(f"Bandit JSON解析失败: {e}")
-        print(f"Bandit 原始输出: {process.stdout}")
+        logging.error(f"Bandit JSON解析失败: {e}")
         return []
 
 
-def run_radon(file_path: str) -> list:
+def _run_radon(file_path: str) -> list:
     cmd = [
-        'radon',
-        'cc',  # 分析圈复杂度
+        ToolName.RADON,
+        'cc',
         file_path,
-        '-j',  # 输出 JSON 格式
-        '-s'  # 显示函数/方法的具体复杂度分数
+        '-j',
+        '-s'
     ]
 
     process = subprocess.run(
@@ -177,77 +146,69 @@ def run_radon(file_path: str) -> list:
     )
 
     if process.stderr:
-        print(f"Radon 错误输出: {process.stderr}")
+        logging.error(f"Radon 错误输出: {process.stderr}")
 
     if not process.stdout.strip():
-        print("Radon 无输出")
+        logging.info("Radon 无输出")
         return []
-
-    results = []
 
     try:
-        # 清除 ANSI 颜色控制符
-        clean_stdout = ANSI_ESCAPE_RE.sub('', process.stdout)
-
-        for line in clean_stdout.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-
-            data = json.loads(line)
-
-            for file, items in data.items():
-                for item in items:
-                    # class / function
-                    results.append({
-                        "type": "radon",
-                        "object_type": item.get("type"),
-                        "name": item.get("name"),
-                        "line": item.get("lineno"),
-                        "complexity": item.get("complexity"),
-                        "rank": item.get("rank"),
-                        "message": f"圈复杂度 {item.get('complexity')}（等级 {item.get('rank')}）",
-                        "severity": "warning" if item.get("complexity", 0) <= 10 else "error"
-                    })
-
-                    # class methods
-                    if item.get("type") == "class":
-                        for method in item.get("methods", []):
-                            results.append({
-                                "type": "radon",
-                                "object_type": "method",
-                                "class": item.get("name"),
-                                "name": method.get("name"),
-                                "line": method.get("lineno"),
-                                "complexity": method.get("complexity"),
-                                "rank": method.get("rank"),
-                                "message": f"{item.get('name')}.{method.get('name')} 圈复杂度 {method.get('complexity')}",
-                                "severity": "warning" if method.get("complexity", 0) <= 10 else "error"
-                            })
-
-        return results
-
+        return _parse_radon_output(process.stdout, file_path)
     except json.JSONDecodeError as e:
-        print(f"Radon JSON解析失败: {e}")
-        print("Radon 原始输出（清洗前）:")
-        print(repr(process.stdout))
+        logging.error(f"Radon JSON 解析失败: {e}")
         return []
 
 
-def run_pyright(file_path: str) -> list:
-    pyright_config_file = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), PYRIGHT_CONFIG_PATH)
-    )
-    pyright_config_dir = os.path.dirname(pyright_config_file)
+def _parse_radon_output(stdout: str, file_path: str) -> list:
+    results = []
+    # 去除 ANSI stdout
+    clean_stdout = re.sub(r'\x1b\[[0-9;]*m', '', stdout)
+    # 圈复杂度阈值
+    THRESHOLD = 10
 
-    if not os.path.exists(pyright_config_file):
-        print(f"Pyright 配置文件不存在: {pyright_config_file}")
-        return []
+    for line in clean_stdout.splitlines():
+        if not line.strip():
+            continue
 
+        data = json.loads(line)
+        for items in data.values():
+            for item in items:
+                results.extend(
+                    _collect_item_issues(item, file_path, THRESHOLD)
+                )
+
+    return results
+
+
+def _collect_item_issues(item: dict, file_path: str, threshold: int) -> list:
+    issues = []
+
+    complexity = item.get("complexity", 0)
+    if complexity > threshold:
+        object_type = item.get("type")
+        name = item.get("name")
+        line = item.get("lineno")
+
+        issues.append({
+                "type": ToolName.RADON,
+                "object_type": object_type,
+                "file": file_path,
+                "name": name,
+                "line": line,
+                "complexity": complexity,
+                "message": f"{object_type} `{name}` 圈复杂度 {complexity}",
+                "severity": "warning"
+            }
+        )
+
+    return issues
+
+
+def _run_pyright(file_path: str) -> list:
     cmd = [
-        'pyright',
+        ToolName.PYRIGHT,
         file_path,
-        '--project', pyright_config_dir,
+        '--project', ConfigPath.PYRIGHT_CONFIG,
         '--outputjson'
     ]
 
@@ -261,33 +222,24 @@ def run_pyright(file_path: str) -> list:
     )
 
     if process.stderr:
-        print(f"Pyright 错误输出: {process.stderr}")
+        logging.error(f"Pyright 错误输出: {process.stderr}")
 
     if not process.stdout.strip():
-        print("Pyright 无输出")
+        logging.info("Pyright 无输出")
         return []
 
     try:
         return json.loads(process.stdout)
     except json.JSONDecodeError as e:
-        print(f"Pyright JSON解析失败: {e}")
-        print(f"Pyright 原始输出: {process.stdout}")
+        logging.error(f"Pyright JSON解析失败: {e}")
         return []
 
 
-def run_pydocstyle(file_path: str) -> list:
-    pydocstyle_config = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), PYDOCSTYLE_CONFIG_PATH)
-    )
-
-    if not os.path.exists(pydocstyle_config):
-        print(f"Pydocstyle 配置文件不存在: {pydocstyle_config}")
-        return []
-
+def _run_pydocstyle(file_path: str) -> list:
     cmd = [
-        'pydocstyle',
+        ToolName.PYDOCSTYLE,
         file_path,
-        '--config', pydocstyle_config
+        '--config', ConfigPath.PYDOCSTYLE_CONFIG
     ]
 
     process = subprocess.run(
@@ -298,32 +250,26 @@ def run_pydocstyle(file_path: str) -> list:
     )
 
     if process.stderr:
-        print(f"Pydocstyle 错误输出: {process.stderr}")
+        logging.error(f"Pydocstyle 错误输出: {process.stderr}")
 
     if not process.stdout.strip():
-        print("Pydocstyle 无输出")
+        logging.info("Pydocstyle 无输出")
         return []
 
     results = []
 
-    # 示例输出：
-    # your_file.py:10 in public function `foo`:
-    #     D103: Missing docstring in public function
     lines = process.stdout.splitlines()
-
     current_file = None
     current_line = None
-    current_object = None
 
     for line in lines:
         line = line.strip()
-        # 文件 + 行号
 
+        # 文件 + 行号
         match = re.match(r"(.+?):(\d+)", line)
         if match:
             current_file = match.group(1)
             current_line = int(match.group(2))
-            current_object = None
             continue
 
         # 错误码 + 描述
@@ -331,13 +277,11 @@ def run_pydocstyle(file_path: str) -> list:
         if match:
             code = match.group(1)
             message = match.group(2)
-
             results.append({
-                "type": "pydocstyle",
+                "type": ToolName.PYDOCSTYLE,
                 "code": code,
                 "file": current_file,
                 "line": current_line,
-                "object": current_object,
                 "message": message,
                 "severity": "warning"
             })

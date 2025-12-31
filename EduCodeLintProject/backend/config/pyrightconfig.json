@@ -1,0 +1,7 @@
+{
+  "typeCheckingMode": "basic",
+
+  "reportUndefinedVariable": true,
+  "reportUnboundVariable": true,
+  "reportUnusedExpression": true
+}

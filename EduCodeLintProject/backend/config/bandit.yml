@@ -1,0 +1,10 @@
+exclude_dirs:
+  - venv
+  - build
+  - .git
+  - __pycache__
+
+tests:
+  - B102  # 危险函数调用（exec/eval）
+  - B110  # 捕获异常未处理（except Exception: / except: pass）
+  - B105  # 硬编码敏感信息（密码、密钥）

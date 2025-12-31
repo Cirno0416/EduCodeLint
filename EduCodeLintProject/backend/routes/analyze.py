@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.services.linter_service import run_linters
 
+
 analyze_bp = Blueprint('upload', __name__)
 
 
@@ -33,6 +34,7 @@ def analyze_multiple():
     data = request.get_json()
     paths = data.get('paths', [])
     exclude_tools = data.get('exclude_tools', [])
+
     results = []
 
     for path in paths:

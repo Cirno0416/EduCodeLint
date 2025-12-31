@@ -1,11 +1,17 @@
 from flask import Flask
 
 from routes.analyze import analyze_bp
+from backend.db.init_database import init_db
 
 
 def create_app():
+    # 如果数据库不存在则初始化
+    init_db()
+
+    # 创建Flask应用并注册蓝图
     app = Flask(__name__)
     app.register_blueprint(analyze_bp)
+
     return app
 
 
