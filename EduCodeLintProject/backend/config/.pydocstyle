@@ -1,12 +1,12 @@
 [pydocstyle]
 select =
-    D100,
-    D400,
-    D205,
-    D415
+    D100,   # 模块缺少 docstring
+    D400,   # 模块 docstring 的首行首字母应大写
+    D205,   # Docstring 摘要与详细描述之间缺少空行
+    D415    # 首行末尾不应该有句号
 
 add-ignore =
-    D101,
-    D102,
-    D103,
-    D104
+    D101,   # 类缺少 docstring
+    D102,   # 函数缺少 docstring
+    D103,   # 方法缺少 docstring
+    D104    # 公共包缺少 docstring

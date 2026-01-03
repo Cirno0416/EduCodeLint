@@ -1,6 +1,6 @@
 from flask import Flask
 
-from routes.analyze import analyze_bp
+from route.analyze import analyze_bp
 from backend.db.init_database import init_db
 
 

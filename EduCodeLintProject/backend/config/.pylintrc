@@ -5,27 +5,27 @@ disable=all
 [MESSAGES CONTROL]
 
 enable=
-    # 过长函数/方法
-    too-many-lines,
-    # 大类
+    # 过长函数/方法 R0915
+    too-many-statements,
+    # 大类 R0902 R0904
     too-many-instance-attributes,
     too-many-public-methods,
-    # 参数过多
+    # 参数过多 R0913
     too-many-arguments,
-    # 过多分支
+    # 过多分支 R0912
     too-many-branches,
-    # 深层嵌套
+    # 深层嵌套 R1702
     too-many-nested-blocks,
 
-    # 未定义名称
+    # 未定义名称 E0602
     undefined-variable,
-    # 赋值前使用
+    # 赋值前使用 E0601
     used-before-assignment,
-    # 未使用赋值
+    # 未使用赋值 W0612 W0613 W0611
     unused-variable,
     unused-argument,
     unused-import,
-    # 不一致返回
+    # 不一致返回 R1710
     inconsistent-return-statements
 
 [DESIGN]
@@ -48,7 +48,7 @@ max-args=5
 
 # 函数/方法的最大分支数
 # Maximum number of branch for function / method body.
-max-branches=12
+max-branches=6
 
 # 最大嵌套块深度
 # Maximum number of nested blocks for function / method body

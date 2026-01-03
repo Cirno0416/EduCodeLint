@@ -1,5 +1,5 @@
-from init_database import get_connection
-from dto.analysis_dto import AnalysisDTO
+from backend.entity.dto.analysis_dto import AnalysisDTO
+from backend.db.init_database import get_connection
 
 
 def insert_analysis(analysis: AnalysisDTO):

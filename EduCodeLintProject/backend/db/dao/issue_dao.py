@@ -1,5 +1,5 @@
-from init_database import get_connection
-from dto.issue_dto import IssueDTO
+from backend.entity.dto.issue_dto import IssueDTO
+from backend.db.init_database import get_connection
 
 
 def insert_issue(issue: IssueDTO):

@@ -2,6 +2,12 @@
   "typeCheckingMode": "basic",
 
   "reportUndefinedVariable": true,
+
   "reportUnboundVariable": true,
-  "reportUnusedExpression": true
+
+  "reportUnusedVariable": true,
+  "reportUnusedImport": true,
+  "reportUnusedFunction": true,
+
+  "reportReturnType": true
 }

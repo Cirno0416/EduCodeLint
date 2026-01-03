@@ -1,5 +1,5 @@
-from init_database import get_connection
-from dto.metric_summary_dto import MetricSummaryDTO
+from backend.entity.dto.metric_summary_dto import MetricSummaryDTO
+from backend.db.init_database import get_connection
 
 
 def insert_summary(metric_summary: MetricSummaryDTO):
@@ -28,7 +28,7 @@ def insert_summary(metric_summary: MetricSummaryDTO):
     conn.close()
 
 
-def delete_by_analysis(analysis_id: str):
+def delete_by_analysis_id(analysis_id: str):
     conn = get_connection()
     cursor = conn.cursor()
 

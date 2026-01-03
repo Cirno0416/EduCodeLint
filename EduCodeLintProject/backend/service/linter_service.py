@@ -1,14 +1,16 @@
 import json
-import os
 import re
 import subprocess
 import logging
+from typing import List
 
-from backend.constants.config_path import ConfigPath
-from backend.constants.tool_name import ToolName
+from backend.constant.config_path import ConfigPath
+from backend.constant.tool_name import ToolName
+from backend.entity.dto.issue_dto import IssueDTO
+from backend.utils.parse_util import parse_issues_to_dtos
 
 
-def run_linters(file_path: str, exclude_tools: list = None) -> dict:
+def run_linters(file_path: str, exclude_tools: list = None) -> List[IssueDTO]:
     exclude_tools = exclude_tools or []
     tool_mapping = {
         ToolName.PYLINT: _run_pylint,
@@ -30,7 +32,10 @@ def run_linters(file_path: str, exclude_tools: list = None) -> dict:
             results[tool_name] = result
         except Exception as e:
             # 单个工具执行失败不影响其他工具
+            logging.error(f"运行 {tool_name} 失败: {e}")
             results[tool_name] = {"error": str(e)}
+
+    results = parse_issues_to_dtos(results, exclude_tools)
 
     return results
 
@@ -190,14 +195,12 @@ def _collect_item_issues(item: dict, file_path: str, threshold: int) -> list:
         line = item.get("lineno")
 
         issues.append({
-                "type": ToolName.RADON,
                 "object_type": object_type,
                 "file": file_path,
                 "name": name,
                 "line": line,
                 "complexity": complexity,
                 "message": f"{object_type} `{name}` 圈复杂度 {complexity}",
-                "severity": "warning"
             }
         )
 
@@ -278,12 +281,10 @@ def _run_pydocstyle(file_path: str) -> list:
             code = match.group(1)
             message = match.group(2)
             results.append({
-                "type": ToolName.PYDOCSTYLE,
                 "code": code,
                 "file": current_file,
                 "line": current_line,
                 "message": message,
-                "severity": "warning"
             })
 
     return results
