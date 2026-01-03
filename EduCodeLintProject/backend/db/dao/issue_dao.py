@@ -1,12 +1,15 @@
+import sqlite3
+
 from backend.entity.dto.issue_dto import IssueDTO
-from backend.db.init_database import get_connection
 
 
-def insert_issue(issue: IssueDTO):
-    conn = get_connection()
+def insert_issues_bulk(issues: list[IssueDTO], conn: sqlite3.Connection):
+    if not issues:
+        return
+
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.executemany("""
         INSERT INTO issue (
             analysis_id,
             file_path,
@@ -18,17 +21,17 @@ def insert_issue(issue: IssueDTO):
             severity,
             message
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        issue.analysis_id,
-        issue.file_path,
-        issue.tool,
-        issue.metric_category,
-        issue.metric_name,
-        issue.rule_id,
-        issue.line,
-        issue.severity,
-        issue.message
-    ))
-
-    conn.commit()
-    conn.close()
+    """, [
+        (
+            issue.analysis_id,
+            issue.file_path,
+            issue.tool,
+            issue.metric_category,
+            issue.metric_name,
+            issue.rule_id,
+            issue.line,
+            issue.severity,
+            issue.message
+        )
+        for issue in issues
+    ])

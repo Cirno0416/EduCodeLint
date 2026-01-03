@@ -2,15 +2,12 @@ import json
 import re
 import subprocess
 import logging
-from typing import List
 
 from backend.constant.config_path import ConfigPath
 from backend.constant.tool_name import ToolName
-from backend.entity.dto.issue_dto import IssueDTO
-from backend.utils.parse_util import parse_issues_to_dtos
 
 
-def run_linters(file_path: str, exclude_tools: list = None) -> List[IssueDTO]:
+def run_linters(file_path: str, exclude_tools: list = None) -> dict:
     exclude_tools = exclude_tools or []
     tool_mapping = {
         ToolName.PYLINT: _run_pylint,
@@ -28,14 +25,10 @@ def run_linters(file_path: str, exclude_tools: list = None) -> List[IssueDTO]:
             continue
 
         try:
-            result = tool_func(file_path)
-            results[tool_name] = result
+            results[tool_name] = tool_func(file_path)
         except Exception as e:
-            # 单个工具执行失败不影响其他工具
             logging.error(f"运行 {tool_name} 失败: {e}")
             results[tool_name] = {"error": str(e)}
-
-    results = parse_issues_to_dtos(results, exclude_tools)
 
     return results
 
@@ -158,13 +151,13 @@ def _run_radon(file_path: str) -> list:
         return []
 
     try:
-        return _parse_radon_output(process.stdout, file_path)
+        return _parse_radon_output(process.stdout)
     except json.JSONDecodeError as e:
         logging.error(f"Radon JSON 解析失败: {e}")
         return []
 
 
-def _parse_radon_output(stdout: str, file_path: str) -> list:
+def _parse_radon_output(stdout: str) -> list:
     results = []
     # 去除 ANSI stdout
     clean_stdout = re.sub(r'\x1b\[[0-9;]*m', '', stdout)
@@ -179,13 +172,13 @@ def _parse_radon_output(stdout: str, file_path: str) -> list:
         for items in data.values():
             for item in items:
                 results.extend(
-                    _collect_item_issues(item, file_path, THRESHOLD)
+                    _collect_item_issues(item, THRESHOLD)
                 )
 
     return results
 
 
-def _collect_item_issues(item: dict, file_path: str, threshold: int) -> list:
+def _collect_item_issues(item: dict, threshold: int) -> list:
     issues = []
 
     complexity = item.get("complexity", 0)
@@ -196,7 +189,6 @@ def _collect_item_issues(item: dict, file_path: str, threshold: int) -> list:
 
         issues.append({
                 "object_type": object_type,
-                "file": file_path,
                 "name": name,
                 "line": line,
                 "complexity": complexity,
@@ -262,7 +254,6 @@ def _run_pydocstyle(file_path: str) -> list:
     results = []
 
     lines = process.stdout.splitlines()
-    current_file = None
     current_line = None
 
     for line in lines:
@@ -271,7 +262,6 @@ def _run_pydocstyle(file_path: str) -> list:
         # 文件 + 行号
         match = re.match(r"(.+?):(\d+)", line)
         if match:
-            current_file = match.group(1)
             current_line = int(match.group(2))
             continue
 
@@ -282,7 +272,6 @@ def _run_pydocstyle(file_path: str) -> list:
             message = match.group(2)
             results.append({
                 "code": code,
-                "file": current_file,
                 "line": current_line,
                 "message": message,
             })

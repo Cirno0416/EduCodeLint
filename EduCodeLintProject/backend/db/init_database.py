@@ -20,7 +20,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS analysis (
             id TEXT PRIMARY KEY,
             created_at TEXT,        -- 分析任务创建时间
-            project_path TEXT       -- 被分析的项目或文件路径
+            file_path TEXT       -- 被分析的项目或文件路径
         );
     """)
 

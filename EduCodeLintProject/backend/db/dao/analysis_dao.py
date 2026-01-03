@@ -1,19 +1,16 @@
+import sqlite3
+
 from backend.entity.dto.analysis_dto import AnalysisDTO
-from backend.db.init_database import get_connection
 
 
-def insert_analysis(analysis: AnalysisDTO):
-    conn = get_connection()
+def insert_analysis(analysis: AnalysisDTO, conn: sqlite3.Connection):
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO analysis (id, created_at, project_path)
+        INSERT INTO analysis (id, created_at, file_path)
         VALUES (?, ?, ?)
     """, (
         analysis.id,
         analysis.created_at,
-        analysis.project_path
+        analysis.file_path
     ))
-
-    conn.commit()
-    conn.close()
