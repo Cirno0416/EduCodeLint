@@ -1,18 +1,18 @@
 import os
-import sqlite3
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from datetime import datetime, timezone
+from queue import Queue
 
 from flask import Blueprint, request
 
-from backend.db.dao.analysis_dao import insert_analysis
-from backend.db.dao.issue_dao import insert_issues_bulk
+from backend.db.writer_worker import db_writer_worker, db_queue, STOP
 from backend.entity.dto.analysis_dto import AnalysisDTO
 from backend.service.linter_service import run_linters
 from backend.entity.result.result import success, error
 from backend.utils.parse_util import parse_issues_to_dtos
-from backend.db.init_database import get_connection
 
 
 analyze_bp = Blueprint('upload', __name__)
@@ -21,21 +21,109 @@ analyze_bp = Blueprint('upload', __name__)
 @analyze_bp.route('/analyze/single', methods=['POST'])
 def analyze_single():
     data = request.get_json()
-    path = data.get('path')
-    exclude_tools = data.get('exclude_tools', [])
+    path = data.get("path")
+    exclude_tools = data.get("exclude_tools", [])
 
-    if not path or not os.path.isfile(path) or not path.endswith('.py'):
-        return error("Invalid python file path")
+    if not path:
+        return error("Path is required")
 
-    conn = get_connection()
+    result = analyze_files(
+        paths=[path],
+        exclude_tools=exclude_tools
+    )
+
+    if result["status"] != "success":
+        return error(result["error"])
+
+    return success(result)
+
+
+@analyze_bp.route('/analyze/multiple', methods=['POST'])
+def analyze_multiple():
+    data = request.get_json()
+    paths = data.get("paths", [])
+    exclude_tools = data.get("exclude_tools", [])
+
+    if not paths:
+        return error("Paths cannot be empty")
+
+    result = analyze_files(
+        paths=paths,
+        exclude_tools=exclude_tools
+    )
+
+    if result["status"] != "success":
+        return error(result["error"])
+
+    return success(result)
+
+
+def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
+    analysis_id = _generate_analysis_id()
+
+    analysis = AnalysisDTO(
+        id=analysis_id,
+        created_at=datetime.now(timezone.utc).isoformat()
+    )
+
+    # 启动数据库写线程（唯一写入口）
+    writer = threading.Thread(
+        target=db_writer_worker,
+        args=(db_queue,),
+        daemon=True
+    )
+    writer.start()
+
+    # 先写 analysis
+    db_queue.put(("analysis", analysis))
+
+    results = []
+
+    max_workers = min(8, os.cpu_count() or 1)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(
+                _analyze_one_file,
+                path,
+                analysis_id,
+                exclude_tools,
+                db_queue
+            )
+            for path in paths
+        ]
+
+        for future in as_completed(futures):
+            results.append(future.result())
+
+    db_queue.put(STOP)
+    writer.join()
+
+    return {
+        "status": "success",
+        "analysis_id": analysis_id,
+        "file_count": len(results),
+        "results": results
+    }
+
+
+def _analyze_one_file(
+    path: str,
+    analysis_id: str,
+    exclude_tools: list[str],
+    db_queue: Queue
+) -> dict:
+
+    if not path or not os.path.isfile(path) or not path.endswith(".py"):
+        return {
+            "file_name": os.path.basename(path),
+            "issues": [],
+            "status": "invalid"
+        }
+
     try:
-        # 插入 analysis 记录
-        analysis_id = _create_and_persist_analysis(file_path=path, conn=conn)
-
-        # 调用插件分析
         raw = run_linters(path, exclude_tools)
 
-        # 解析 issue 记录
         issues = parse_issues_to_dtos(
             raw=raw,
             analysis_id=analysis_id,
@@ -43,95 +131,29 @@ def analyze_single():
             exclude_tools=exclude_tools
         )
 
-        # 插入 issue 记录
-        insert_issues_bulk(issues=issues, conn=conn)
+        # 只投递 issue，由 writer 顺序写
+        if issues:
+            db_queue.put(("issues", issues))
 
-        # 提交事务
-        conn.commit()
+        # 分析成功，修改 analysis 状态为 success
+        db_queue.put(("update_analysis_status", analysis_id, "success"))
+
+        return {
+            "file_name": os.path.basename(path),
+            "issues": [asdict(d) for d in issues],
+            "status": "success"
+        }
 
     except Exception as e:
-        # 回滚整个事务
-        conn.rollback()
-        return error(f"Analysis failed: {e}")
+        # 分析失败，修改 analysis 状态为 failed
+        db_queue.put(("update_analysis_status", analysis_id, "failed"))
 
-    finally:
-        conn.close()
-
-    return success({
-        "file_name": os.path.basename(path),
-        "issues": [asdict(d) for d in issues]
-    })
-
-
-@analyze_bp.route('/analyze/multiple', methods=['POST'])
-def analyze_multiple():
-    data = request.get_json()
-    paths = data.get('paths', [])
-    exclude_tools = data.get('exclude_tools', [])
-
-    results = []
-
-    for path in paths:
-        if not path or not os.path.isfile(path) or not path.endswith('.py'):
-            continue
-
-        conn = get_connection()
-        try:
-            # 插入 analysis 记录
-            analysis_id = _create_and_persist_analysis(file_path=path, conn=conn)
-
-            # 调用插件分析
-            raw = run_linters(path, exclude_tools)
-
-            # 解析 issue 记录
-            issues = parse_issues_to_dtos(
-                raw=raw,
-                analysis_id=analysis_id,
-                file_path=path,
-                exclude_tools=exclude_tools
-            )
-
-            # 插入 issue 记录
-            insert_issues_bulk(issues=issues, conn=conn)
-
-            # 提交事务
-            conn.commit()
-
-            results.append({
-                'file_name': os.path.basename(path),
-                'issues': [asdict(d) for d in issues],
-                'status': 'success'
-            })
-
-        except Exception as e:
-            # 回滚事务
-            conn.rollback()
-            results.append({
-                'file_name': os.path.basename(path),
-                'issues': [],
-                'status': 'failed',
-                'error': str(e)
-            })
-
-        finally:
-            conn.close()
-
-    return success({
-        'file_count': len(results),
-        'results': results
-    })
-
-
-def _create_and_persist_analysis(file_path: str, conn: sqlite3.Connection) -> str:
-    analysis_id = _generate_analysis_id()
-    analysis = AnalysisDTO(
-        id=analysis_id,
-        created_at=datetime.now(timezone.utc).isoformat(),
-        file_path=file_path
-    )
-    insert_analysis(analysis, conn)
-
-    return analysis_id
+        return {
+            "file_name": os.path.basename(path),
+            "issues": [],
+            "status": "failed",
+            "error": str(e)
+        }
 
 
 def _generate_analysis_id() -> str:

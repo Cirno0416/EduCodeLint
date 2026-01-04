@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class AnalysisDTO:
     id: str
     created_at: str
-    file_path: str
+    status: str = field(default="pending")
