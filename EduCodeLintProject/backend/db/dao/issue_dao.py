@@ -11,8 +11,7 @@ def insert_issues_bulk(issues: list[IssueDTO], conn: sqlite3.Connection):
 
     cursor.executemany("""
         INSERT INTO issue (
-            analysis_id,
-            file_path,
+            metric_summary_id,
             tool,
             metric_category,
             metric_name,
@@ -20,11 +19,10 @@ def insert_issues_bulk(issues: list[IssueDTO], conn: sqlite3.Connection):
             line,
             severity,
             message
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, [
         (
-            issue.analysis_id,
-            issue.file_path,
+            issue.metric_summary_id,
             issue.tool,
             issue.metric_category,
             issue.metric_name,

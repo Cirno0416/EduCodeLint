@@ -1,12 +1,9 @@
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class MetricSummaryDTO:
-    analysis_id: str
-    file_path: str
+    file_id: int
     metric_category: str
-    metric_name: str
-    count: int
-    value: Optional[float]
+    issue_count: int
+    score: float

@@ -19,16 +19,35 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS analysis (
             id TEXT PRIMARY KEY,
+            file_count INTEGER,     -- 分析的文件数量
             created_at TEXT,        -- 分析任务创建时间
-            file_path TEXT       -- 被分析的项目或文件路径
+            status TEXT             -- 分析任务状态 (pending, success, failed)
+        );
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS file (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            analysis_id TEXT,       -- 所属分析任务ID
+            file_path TEXT,         -- 源文件路径
+            total_score REAL        -- 文件得分
+        );
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS metric_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id INT,            -- 所属的文件ID
+            metric_category TEXT,   -- 指标类别
+            issue_count INTEGER,    -- 指标出现次数
+            score REAL              -- 指标得分
         );
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS issue (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            analysis_id TEXT,       -- 所属分析任务ID
-            file_path TEXT,         -- 问题所在源文件路径
+            metric_summary_id TEXT, -- 所属指标总结ID
             tool TEXT,              -- 发现问题的静态分析工具名称
             metric_category TEXT,   -- 代码质量指标类别
             metric_name TEXT,       -- 具体代码质量指标名称
@@ -40,14 +59,11 @@ def init_db():
     """)
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS metric_summary (
+        CREATE TABLE IF NOT EXISTS comparison (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            analysis_id TEXT,       -- 所属分析任务ID
-            file_path TEXT,         -- 被统计的源文件路径
-            metric_category TEXT,   -- 指标类别
-            metric_name TEXT,       -- 指标名称
-            count INTEGER,          -- 指标出现次数
-            value REAL              -- 指标数值（如复杂度等）
+            created_at TEXT,        -- 对比任务创建时间
+            analysis_id_1 TEXT,     -- 进行对比的批次 1
+            analysis_id_2 TEXT      -- 进行对比的批次 2
         );
     """)
 

@@ -72,9 +72,9 @@ def _get_metric_name_bandit(rule_id: str) -> str:
 
 def _get_severity_bandit(rule_id: str) -> str:
     BANDIT_SEVERITY_MAPPING = {
-        "B102": SeverityLevel.MEDIUM,
-        "B110": SeverityLevel.LOW,
-        "B105": SeverityLevel.MEDIUM
+        "B102": SeverityLevel.HIGH,
+        "B110": SeverityLevel.MEDIUM,
+        "B105": SeverityLevel.HIGH
     }
     return BANDIT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
 
@@ -119,13 +119,6 @@ def _get_metric_category_flake8(code_val: str) -> str:
 
 def _get_metric_name_flake8(rule_id: str) -> str:
     FLAKE8_METRIC_NAME_MAPPING = {
-        # 圈复杂度 > 10
-        "C901": MetricName.CYCLOMATIC_COMPLEXITY,
-
-        # 缺少模块/类/函数 Docstring
-        "D100": MetricName.MISSING_MODULE_DOCSTRING,
-        "D205": MetricName.NONSTANDARD_DOCSTRING,
-
         # 行长度限制
         "E501": MetricName.LINE_LENGTH,
         # 括号和空白使用
@@ -139,11 +132,6 @@ def _get_metric_name_flake8(rule_id: str) -> str:
         "E303": MetricName.BLANK_LINES,
         "E305": MetricName.BLANK_LINES,
         "W391": MetricName.BLANK_LINES,
-
-        # 使用未定义名称
-        "F821": MetricName.UNDEFINED_NAME,
-        # 局部变量赋值但未使用
-        "F841": MetricName.UNUSED_ASSIGNMENT,
 
         # 变量和函数命名风格
         "N806": MetricName.VARIABLE_FUNCTION_NAMING,
@@ -161,11 +149,6 @@ def _get_metric_name_flake8(rule_id: str) -> str:
 
 def _get_severity_flake8(rule_id: str) -> str:
     FLAKE8_SEVERITY_MAPPING = {
-        "C901": SeverityLevel.HIGH,
-
-        "D100": SeverityLevel.MEDIUM,
-        "D205": SeverityLevel.LOW,
-
         "E201": SeverityLevel.LOW,
         "E202": SeverityLevel.LOW,
         "E225": SeverityLevel.LOW,
@@ -174,17 +157,14 @@ def _get_severity_flake8(rule_id: str) -> str:
         "E302": SeverityLevel.LOW,
         "E303": SeverityLevel.LOW,
         "E305": SeverityLevel.LOW,
-        "E501": SeverityLevel.MEDIUM,
+        "E501": SeverityLevel.LOW,
         "W391": SeverityLevel.LOW,
 
-        "F821": SeverityLevel.HIGH,
-        "F841": SeverityLevel.LOW,
-
-        "N801": SeverityLevel.LOW,
-        "N802": SeverityLevel.LOW,
-        "N803": SeverityLevel.LOW,
-        "N806": SeverityLevel.LOW,
-        "N812": SeverityLevel.LOW
+        "N801": SeverityLevel.MEDIUM,
+        "N802": SeverityLevel.MEDIUM,
+        "N803": SeverityLevel.MEDIUM,
+        "N806": SeverityLevel.MEDIUM,
+        "N812": SeverityLevel.MEDIUM
     }
 
     return FLAKE8_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
@@ -224,18 +204,7 @@ def _get_metric_category_pylint(rule_id: str) -> str:
         # 过多分支
         "R0912": MetricCategory.CODE_STYLE,
         # 深层嵌套
-        "R1702": MetricCategory.CODE_STYLE,
-
-        # 未定义名称
-        "E0602": MetricCategory.POTENTIAL_ERROR,
-        # 赋值前使用
-        "E0601": MetricCategory.POTENTIAL_ERROR,
-        # 未使用的赋值
-        "W0612": MetricCategory.POTENTIAL_ERROR,
-        "W0613": MetricCategory.POTENTIAL_ERROR,
-        "W0611": MetricCategory.POTENTIAL_ERROR,
-        # 不一致返回
-        "R1710": MetricCategory.POTENTIAL_ERROR,
+        "R1702": MetricCategory.CODE_STYLE
     }
 
     return PYLINT_CATEGORY_MAPPING.get(rule_id, MetricCategory.UNKNOWN_METRIC_CATEGORY)
@@ -248,14 +217,7 @@ def _get_metric_name_pylint(rule_id: str) -> str:
         "R0904": MetricName.LARGE_CLASS,
         "R0913": MetricName.TOO_MANY_PARAMETERS,
         "R0912": MetricName.TOO_MANY_BRANCHES,
-        "R1702": MetricName.DEEP_NESTING,
-
-        "E0602": MetricName.UNDEFINED_NAME,
-        "E0601": MetricName.USE_BEFORE_ASSIGNMENT,
-        "W0612": MetricName.UNUSED_ASSIGNMENT,
-        "W0613": MetricName.UNUSED_ASSIGNMENT,
-        "W0611": MetricName.UNUSED_ASSIGNMENT,
-        "R1710": MetricName.INCONSISTENT_RETURN,
+        "R1702": MetricName.DEEP_NESTING
     }
 
     return PYLINT_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
@@ -263,20 +225,13 @@ def _get_metric_name_pylint(rule_id: str) -> str:
 
 def _get_severity_pylint(rule_id: str) -> str:
     PYLINT_SEVERITY_MAPPING = {
-        "E0602": SeverityLevel.HIGH,
-        "E0601": SeverityLevel.HIGH,
-        "R1710": SeverityLevel.HIGH,
+        "R0915": SeverityLevel.HIGH,
+        "R0912": SeverityLevel.HIGH,
 
-        "R0915": SeverityLevel.MEDIUM,
         "R0902": SeverityLevel.MEDIUM,
         "R0904": SeverityLevel.MEDIUM,
         "R0913": SeverityLevel.MEDIUM,
-        "R0912": SeverityLevel.MEDIUM,
-        "R1702": SeverityLevel.MEDIUM,
-
-        "W0612": SeverityLevel.LOW,
-        "W0613": SeverityLevel.LOW,
-        "W0611": SeverityLevel.LOW,
+        "R1702": SeverityLevel.MEDIUM
     }
 
     return PYLINT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
@@ -389,9 +344,9 @@ def _get_severity_pyright(rule_id: str) -> str:
         "reportUnboundVariable": SeverityLevel.HIGH,
         "reportReturnType": SeverityLevel.HIGH,
 
-        "reportUnusedVariable": SeverityLevel.LOW,
-        "reportUnusedImport": SeverityLevel.LOW,
-        "reportUnusedFunction": SeverityLevel.LOW
+        "reportUnusedVariable": SeverityLevel.MEDIUM,
+        "reportUnusedImport": SeverityLevel.MEDIUM,
+        "reportUnusedFunction": SeverityLevel.MEDIUM
     }
 
     return PYRIGHT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)

@@ -7,10 +7,11 @@ def insert_analysis(analysis: AnalysisDTO, conn: sqlite3.Connection):
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO analysis (id, created_at)
-        VALUES (?, ?)
+        INSERT INTO analysis (id, file_count, created_at)
+        VALUES (?, ?, ?)
     """, (
         analysis.id,
+        analysis.file_count,
         analysis.created_at
     ))
 

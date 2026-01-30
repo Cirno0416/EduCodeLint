@@ -4,7 +4,6 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from datetime import datetime, timezone
-from queue import Queue
 
 from flask import Blueprint, request
 
@@ -12,7 +11,7 @@ from backend.db.writer_worker import db_writer_worker, db_queue, STOP
 from backend.entity.dto.analysis_dto import AnalysisDTO
 from backend.service.linter_service import run_linters
 from backend.entity.result.result import success, error
-from backend.utils.parse_util import parse_issues_to_dtos
+from backend.service.issue_parse_service import parse_issues_to_dtos
 
 
 analyze_bp = Blueprint('upload', __name__)
@@ -63,6 +62,7 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
 
     analysis = AnalysisDTO(
         id=analysis_id,
+        file_count=len(paths),
         created_at=datetime.now(timezone.utc).isoformat()
     )
 
@@ -87,8 +87,7 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
                 _analyze_one_file,
                 path,
                 analysis_id,
-                exclude_tools,
-                db_queue
+                exclude_tools
             )
             for path in paths
         ]
@@ -110,8 +109,7 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
 def _analyze_one_file(
     path: str,
     analysis_id: str,
-    exclude_tools: list[str],
-    db_queue: Queue
+    exclude_tools: list[str]
 ) -> dict:
 
     if not path or not os.path.isfile(path) or not path.endswith(".py"):
