@@ -1,5 +1,4 @@
 import logging
-from typing import List, Dict, Any
 
 from backend.entity.dto.issue_dto import IssueDTO
 from backend.constant.metric_category import MetricCategory
@@ -8,14 +7,9 @@ from backend.constant.metric_name import MetricName
 from backend.constant.severity_level import SeverityLevel
 
 
-def parse_issues_to_dtos(
-        raw: Dict[str, Any],
-        analysis_id: str,
-        file_path: str,
-        exclude_tools: list = None
-) -> List[IssueDTO]:
+def parse_issues_to_dtos(raw: dict[str, any], exclude_tools: list = None) -> list[IssueDTO]:
 
-    issue_dtos: List[IssueDTO] = []
+    issue_dtos: list[IssueDTO] = []
     exclude_tools = exclude_tools or []
 
     tool_mapping = {
@@ -31,21 +25,20 @@ def parse_issues_to_dtos(
         if tool_name in exclude_tools:
             continue
 
-        issue_dtos.extend(tool_func(raw, analysis_id, file_path))
+        issue_dtos.extend(tool_func(raw))
 
     return issue_dtos
 
 
-def _parse_bandit(results: Dict[str, Any], analysis_id: str, file_path) -> List[IssueDTO]:
-    dtos: List[IssueDTO] = []
+def _parse_bandit(results: dict[str, any]) -> list[IssueDTO]:
+    dtos: list[IssueDTO] = []
     for item in results.get(ToolName.BANDIT, []):
         rule_id = item.get("test_id")
         metric_name = _get_metric_name_bandit(rule_id)
         sererity = _get_severity_bandit(rule_id)
 
         dtos.append(IssueDTO(
-            analysis_id=analysis_id,
-            file_path=file_path,
+            metric_summary_id=-1,
             tool=ToolName.BANDIT,
             metric_category=MetricCategory.SECURITY_VULNERABILITY,
             metric_name=metric_name,
@@ -79,8 +72,8 @@ def _get_severity_bandit(rule_id: str) -> str:
     return BANDIT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
 
 
-def _parse_flake8(results: Dict[str, Any], analysis_id: str, file_path) -> List[IssueDTO]:
-    dtos: List[IssueDTO] = []
+def _parse_flake8(results: dict[str, any]) -> list[IssueDTO]:
+    dtos: list[IssueDTO] = []
 
     for _, issues in results.get(ToolName.FLAKE8, {}).items():
         for item in issues:
@@ -90,8 +83,7 @@ def _parse_flake8(results: Dict[str, Any], analysis_id: str, file_path) -> List[
             severity = _get_severity_flake8(rule_id)
 
             dtos.append(IssueDTO(
-                analysis_id=analysis_id,
-                file_path=file_path,
+                metric_summary_id=-1,
                 tool=ToolName.FLAKE8,
                 metric_category=metric_category,
                 metric_name=metric_name,
@@ -170,8 +162,8 @@ def _get_severity_flake8(rule_id: str) -> str:
     return FLAKE8_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
 
 
-def _parse_pylint(results: Dict[str, Any], analysis_id: str, file_path) -> List[IssueDTO]:
-    dtos: List[IssueDTO] = []
+def _parse_pylint(results: dict[str, any]) -> list[IssueDTO]:
+    dtos: list[IssueDTO] = []
     for item in results.get(ToolName.PYLINT, []):
         rule_id = item.get("message-id")
         metric_category = _get_metric_category_pylint(rule_id)
@@ -179,8 +171,7 @@ def _parse_pylint(results: Dict[str, Any], analysis_id: str, file_path) -> List[
         severity = _get_severity_pylint(rule_id)
 
         dtos.append(IssueDTO(
-            analysis_id=analysis_id,
-            file_path=file_path,
+            metric_summary_id=-1,
             tool=ToolName.PYLINT,
             metric_category=metric_category,
             metric_name=metric_name,
@@ -204,7 +195,10 @@ def _get_metric_category_pylint(rule_id: str) -> str:
         # 过多分支
         "R0912": MetricCategory.CODE_STYLE,
         # 深层嵌套
-        "R1702": MetricCategory.CODE_STYLE
+        "R1702": MetricCategory.CODE_STYLE,
+
+        # 未使用赋值（参数） W0613
+        "W0613": MetricCategory.POTENTIAL_ERROR
     }
 
     return PYLINT_CATEGORY_MAPPING.get(rule_id, MetricCategory.UNKNOWN_METRIC_CATEGORY)
@@ -217,7 +211,9 @@ def _get_metric_name_pylint(rule_id: str) -> str:
         "R0904": MetricName.LARGE_CLASS,
         "R0913": MetricName.TOO_MANY_PARAMETERS,
         "R0912": MetricName.TOO_MANY_BRANCHES,
-        "R1702": MetricName.DEEP_NESTING
+        "R1702": MetricName.DEEP_NESTING,
+
+        "W0613": MetricName.UNUSED_ASSIGNMENT
     }
 
     return PYLINT_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
@@ -231,22 +227,23 @@ def _get_severity_pylint(rule_id: str) -> str:
         "R0902": SeverityLevel.MEDIUM,
         "R0904": SeverityLevel.MEDIUM,
         "R0913": SeverityLevel.MEDIUM,
-        "R1702": SeverityLevel.MEDIUM
+        "R1702": SeverityLevel.MEDIUM,
+
+        "W0613": SeverityLevel.MEDIUM
     }
 
     return PYLINT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
 
 
-def _parse_pydocstyle(results: Dict[str, Any], analysis_id: str, file_path) -> List[IssueDTO]:
-    dtos: List[IssueDTO] = []
+def _parse_pydocstyle(results: dict[str, any]) -> list[IssueDTO]:
+    dtos: list[IssueDTO] = []
     for item in results.get(ToolName.PYDOCSTYLE, []):
         rule_id = item.get("code")
         metric_name = _get_metric_name_pydocstyle(rule_id)
         severity = _get_severity_pydocstyle(rule_id)
 
         dtos.append(IssueDTO(
-            analysis_id=analysis_id,
-            file_path=file_path,
+            metric_summary_id=-1,
             tool=ToolName.PYDOCSTYLE,
             metric_category=MetricCategory.DOCUMENTATION,
             metric_name=metric_name,
@@ -280,16 +277,15 @@ def _get_severity_pydocstyle(rule_id: str) -> str:
     return PYDOCSTYLE_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
 
 
-def _parse_radon(results: Dict[str, Any], analysis_id: str, file_path) -> List[IssueDTO]:
-    dtos: List[IssueDTO] = []
+def _parse_radon(results: dict[str, any]) -> list[IssueDTO]:
+    dtos: list[IssueDTO] = []
     for item in results.get(ToolName.RADON, []):
         dtos.append(IssueDTO(
-            analysis_id=analysis_id,
-            file_path=file_path,
+            metric_summary_id=-1,
             tool=ToolName.RADON,
             metric_category=MetricCategory.COMPLEXITY,
             metric_name=MetricName.CYCLOMATIC_COMPLEXITY,
-            rule_id=item.get("name"),
+            rule_id=item.get("complexity"),
             line=item.get("line"),
             severity=SeverityLevel.HIGH,
             message=item.get("message")
@@ -297,16 +293,15 @@ def _parse_radon(results: Dict[str, Any], analysis_id: str, file_path) -> List[I
     return dtos
 
 
-def _parse_pyright(results: Dict[str, Any], analysis_id: str, file_path) -> List[IssueDTO]:
-    dtos: List[IssueDTO] = []
+def _parse_pyright(results: dict[str, any]) -> list[IssueDTO]:
+    dtos: list[IssueDTO] = []
     for item in results.get(ToolName.PYRIGHT, {}).get("generalDiagnostics", []):
         rule_id = item.get("rule")
         metric_name = _get_metric_name_pyright(rule_id)
         severity = _get_severity_pyright(item.get("severity"))
 
         dtos.append(IssueDTO(
-            analysis_id=analysis_id,
-            file_path=file_path,
+            metric_summary_id=-1,
             tool=ToolName.PYRIGHT,
             metric_category=MetricCategory.POTENTIAL_ERROR,
             metric_name=metric_name,

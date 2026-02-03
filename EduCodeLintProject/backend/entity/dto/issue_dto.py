@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class IssueDTO:
-    metric_summary_id: str
+    metric_summary_id: int
     tool: str
     metric_category: str
     metric_name: str

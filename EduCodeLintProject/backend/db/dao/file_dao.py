@@ -14,3 +14,5 @@ def insert_file(file: FileDTO, conn: sqlite3.Connection):
         file.file_path,
         file.total_score
     ))
+
+    return cursor.lastrowid

@@ -158,7 +158,7 @@ def _run_radon(file_path: str) -> list:
 
 
 def _parse_radon_output(stdout: str) -> list:
-    results = []
+    all_issues = []
     # 去除 ANSI stdout
     clean_stdout = re.sub(r'\x1b\[[0-9;]*m', '', stdout)
     # 圈复杂度阈值
@@ -171,11 +171,15 @@ def _parse_radon_output(stdout: str) -> list:
         data = json.loads(line)
         for items in data.values():
             for item in items:
-                results.extend(
-                    _collect_item_issues(item, THRESHOLD)
-                )
+                all_issues.extend(_collect_item_issues(item, THRESHOLD))
 
-    return results
+    if not all_issues:
+        return []
+
+    # 只返回复杂度最高的一个 issue
+    max_issue = max(all_issues, key=lambda x: x["complexity"])
+
+    return [max_issue]
 
 
 def _collect_item_issues(item: dict, threshold: int) -> list:

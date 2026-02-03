@@ -9,6 +9,8 @@ from flask import Blueprint, request
 
 from backend.db.writer_worker import db_writer_worker, db_queue, STOP
 from backend.entity.dto.analysis_dto import AnalysisDTO
+from backend.entity.dto.file_dto import FileDTO
+from backend.service.calculate_score_service import build_metric_summaries, calculate_file_score
 from backend.service.linter_service import run_linters
 from backend.entity.result.result import success, error
 from backend.service.issue_parse_service import parse_issues_to_dtos
@@ -111,7 +113,6 @@ def _analyze_one_file(
     analysis_id: str,
     exclude_tools: list[str]
 ) -> dict:
-
     if not path or not os.path.isfile(path) or not path.endswith(".py"):
         return {
             "file_name": os.path.basename(path),
@@ -122,16 +123,18 @@ def _analyze_one_file(
     try:
         raw = run_linters(path, exclude_tools)
 
-        issues = parse_issues_to_dtos(
-            raw=raw,
+        issues = parse_issues_to_dtos(raw, exclude_tools)
+
+        summaries = build_metric_summaries(issues)
+
+        file = FileDTO(
             analysis_id=analysis_id,
             file_path=path,
-            exclude_tools=exclude_tools
+            total_score=calculate_file_score(summaries),
         )
 
-        # 只投递 issue，由 writer 顺序写
-        if issues:
-            db_queue.put(("issues", issues))
+        # 由 writer 顺序写
+        db_queue.put(("file_result", file, summaries))
 
         # 分析成功，修改 analysis 状态为 success
         db_queue.put(("update_analysis_status", analysis_id, "success"))
@@ -139,6 +142,7 @@ def _analyze_one_file(
         return {
             "file_name": os.path.basename(path),
             "issues": [asdict(d) for d in issues],
+            "score": file.total_score,
             "status": "success"
         }
 

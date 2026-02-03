@@ -47,7 +47,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS issue (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            metric_summary_id TEXT, -- 所属指标总结ID
+            metric_summary_id INT, -- 所属指标总结ID
             tool TEXT,              -- 发现问题的静态分析工具名称
             metric_category TEXT,   -- 代码质量指标类别
             metric_name TEXT,       -- 具体代码质量指标名称

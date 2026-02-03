@@ -8,7 +8,6 @@
   "reportUnusedVariable": true,
   "reportUnusedImport": true,
   "reportUnusedFunction": true,
-  "reportUnusedParameter": true,
 
   "reportReturnType": true
 }

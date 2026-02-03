@@ -39,9 +39,6 @@ class MetricName:
     # 圈复杂度
     CYCLOMATIC_COMPLEXITY = "cyclomatic_complexity"
 
-    # 认知复杂度
-    COGNITIVE_COMPLEXITY = "cognitive_complexity"
-
     # ===== 潜在错误 =====
 
     # 未定义名称引用
@@ -52,9 +49,6 @@ class MetricName:
 
     # 变量赋值前使用
     USE_BEFORE_ASSIGNMENT = "use_before_assignment"
-
-    # 异常捕获不规范
-    IMPROPER_EXCEPTION_HANDLING = "improper_exception_handling"
 
     # 不一致返回
     INCONSISTENT_RETURN = "inconsistent_return"

@@ -1,9 +1,9 @@
+import sqlite3
+
 from backend.entity.dto.metric_summary_dto import MetricSummaryDTO
-from backend.db.init_database import get_connection
 
 
-def insert_summary(metric_summary: MetricSummaryDTO):
-    conn = get_connection()
+def insert_metric_summary(metric_summary: MetricSummaryDTO, conn: sqlite3.Connection):
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -20,5 +20,4 @@ def insert_summary(metric_summary: MetricSummaryDTO):
         metric_summary.score
     ))
 
-    conn.commit()
-    conn.close()
+    return cursor.lastrowid

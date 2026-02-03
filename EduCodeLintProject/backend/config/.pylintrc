@@ -17,6 +17,9 @@ enable=
     # 深层嵌套 R1702
     too-many-nested-blocks,
 
+    # 未使用赋值（参数） W0613
+    unused-argument
+
 [DESIGN]
 
 # 函数/方法的最大语句数
