@@ -186,16 +186,16 @@ def _parse_pylint(results: dict[str, any]) -> list[IssueDTO]:
 def _get_metric_category_pylint(rule_id: str) -> str:
     PYLINT_CATEGORY_MAPPING = {
         # 过长函数/方法
-        "R0915": MetricCategory.CODE_STYLE,
+        "R0915": MetricCategory.CODE_SMELL,
         # 大类
-        "R0902": MetricCategory.CODE_STYLE,
-        "R0904": MetricCategory.CODE_STYLE,
+        "R0902": MetricCategory.CODE_SMELL,
+        "R0904": MetricCategory.CODE_SMELL,
         # 参数过多
-        "R0913": MetricCategory.CODE_STYLE,
+        "R0913": MetricCategory.CODE_SMELL,
         # 过多分支
-        "R0912": MetricCategory.CODE_STYLE,
+        "R0912": MetricCategory.CODE_SMELL,
         # 深层嵌套
-        "R1702": MetricCategory.CODE_STYLE,
+        "R1702": MetricCategory.CODE_SMELL,
 
         # 未使用赋值（参数） W0613
         "W0613": MetricCategory.POTENTIAL_ERROR
@@ -298,7 +298,7 @@ def _parse_pyright(results: dict[str, any]) -> list[IssueDTO]:
     for item in results.get(ToolName.PYRIGHT, {}).get("generalDiagnostics", []):
         rule_id = item.get("rule")
         metric_name = _get_metric_name_pyright(rule_id)
-        severity = _get_severity_pyright(item.get("severity"))
+        severity = _get_severity_pyright(rule_id)
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,

@@ -40,6 +40,7 @@ def build_metric_summaries(issues: list[IssueDTO]) -> list[MetricSummaryDTO]:
 
     # 对每一类 issue 生成 MetricSummaryDTO
     for metric_category, group in grouped.items():
+        logging.info("Processing metric category: %s with %d issues", metric_category, len(group))
         issue_count = len(group)
         score = _calculate_score(metric_category, group)
 
@@ -68,12 +69,10 @@ def _calculate_score(metric_category: str, issues: list[IssueDTO]) -> float:
         gamma = SeverityLevel.COEFFICIENTS[issue.severity]
         score = 100 - gamma * (complexity - threshold)
 
-    elif metric_category == (
-            MetricCategory.CODE_STYLE or
-            MetricCategory.CODE_SMELL or
-            MetricCategory.SECURITY_VULNERABILITY or
-            MetricCategory.POTENTIAL_ERROR
-    ):
+    elif metric_category == MetricCategory.CODE_STYLE or \
+            metric_category == MetricCategory.CODE_SMELL or \
+            metric_category == MetricCategory.SECURITY_VULNERABILITY or \
+            metric_category == MetricCategory.POTENTIAL_ERROR:
         for issue in issues:
             score -= SeverityLevel.COEFFICIENTS[issue.severity]
 
