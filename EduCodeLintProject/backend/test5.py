@@ -223,14 +223,4 @@ def long_func():
     print("1")
 
 
-def inconsistent_return_statements_func(x):
-    if x == 1:
-        return 1
-    else:
-        a = x
-        print(a)
 
-
-def used_before_assignment_func():
-    print(a)  # 使用了 a，但还没赋值
-    a = 10

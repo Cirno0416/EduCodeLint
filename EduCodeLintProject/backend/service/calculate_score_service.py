@@ -9,8 +9,7 @@ from backend.entity.dto.issue_dto import IssueDTO
 from backend.entity.dto.metric_summary_dto import MetricSummaryDTO
 
 
-def calculate_file_score(summaries: list[MetricSummaryDTO]) -> float:
-    s_final = 0.0
+def calc_file_score(summaries: list[MetricSummaryDTO]) -> float:
     s_base = 0.0
     r = 1.0
     category_scores = {category: 100.0 for category in WEIGHTS.keys()}
@@ -42,7 +41,7 @@ def build_metric_summaries(issues: list[IssueDTO]) -> list[MetricSummaryDTO]:
     for metric_category, group in grouped.items():
         logging.info("Processing metric category: %s with %d issues", metric_category, len(group))
         issue_count = len(group)
-        score = _calculate_score(metric_category, group)
+        score = _calc_score(metric_category, group)
 
         summaries.append(MetricSummaryDTO(
             file_id=-1,
@@ -55,7 +54,7 @@ def build_metric_summaries(issues: list[IssueDTO]) -> list[MetricSummaryDTO]:
     return summaries
 
 
-def _calculate_score(metric_category: str, issues: list[IssueDTO]) -> float:
+def _calc_score(metric_category: str, issues: list[IssueDTO]) -> float:
     score = 100.0
     if metric_category == MetricCategory.COMPLEXITY:
         if len(issues) > 1:

@@ -1,6 +1,7 @@
 from flask import Flask
 
 from route.analyze import analyze_bp
+from route.compare import compare_bp
 from backend.db.init_database import init_db
 
 
@@ -11,6 +12,7 @@ def create_app():
     # 创建Flask应用并注册蓝图
     app = Flask(__name__)
     app.register_blueprint(analyze_bp)
+    app.register_blueprint(compare_bp)
 
     return app
 
