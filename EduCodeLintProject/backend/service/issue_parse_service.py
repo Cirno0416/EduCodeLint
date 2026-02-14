@@ -1,5 +1,6 @@
 import logging
 
+from backend.constant.metric_severity import METRIC_SEVERITY_MAP
 from backend.entity.dto.issue_dto import IssueDTO
 from backend.constant.metric_category import MetricCategory
 from backend.constant.tool_name import ToolName
@@ -35,7 +36,7 @@ def _parse_bandit(results: dict[str, any]) -> list[IssueDTO]:
     for item in results.get(ToolName.BANDIT, []):
         rule_id = item.get("test_id")
         metric_name = _get_metric_name_bandit(rule_id)
-        sererity = _get_severity_bandit(rule_id)
+        sererity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -63,15 +64,6 @@ def _get_metric_name_bandit(rule_id: str) -> str:
     return BANDIT_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
 
 
-def _get_severity_bandit(rule_id: str) -> str:
-    BANDIT_SEVERITY_MAPPING = {
-        "B102": SeverityLevel.HIGH,
-        "B110": SeverityLevel.MEDIUM,
-        "B105": SeverityLevel.HIGH
-    }
-    return BANDIT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
-
-
 def _parse_flake8(results: dict[str, any]) -> list[IssueDTO]:
     dtos: list[IssueDTO] = []
 
@@ -80,7 +72,7 @@ def _parse_flake8(results: dict[str, any]) -> list[IssueDTO]:
             rule_id = item.get("code")
             metric_category = _get_metric_category_flake8(rule_id)
             metric_name = _get_metric_name_flake8(rule_id)
-            severity = _get_severity_flake8(rule_id)
+            severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
 
             dtos.append(IssueDTO(
                 metric_summary_id=-1,
@@ -139,36 +131,13 @@ def _get_metric_name_flake8(rule_id: str) -> str:
     return FLAKE8_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
 
 
-def _get_severity_flake8(rule_id: str) -> str:
-    FLAKE8_SEVERITY_MAPPING = {
-        "E201": SeverityLevel.LOW,
-        "E202": SeverityLevel.LOW,
-        "E225": SeverityLevel.LOW,
-        "E231": SeverityLevel.LOW,
-        "E301": SeverityLevel.LOW,
-        "E302": SeverityLevel.LOW,
-        "E303": SeverityLevel.LOW,
-        "E305": SeverityLevel.LOW,
-        "E501": SeverityLevel.LOW,
-        "W391": SeverityLevel.LOW,
-
-        "N801": SeverityLevel.MEDIUM,
-        "N802": SeverityLevel.MEDIUM,
-        "N803": SeverityLevel.MEDIUM,
-        "N806": SeverityLevel.MEDIUM,
-        "N812": SeverityLevel.MEDIUM
-    }
-
-    return FLAKE8_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
-
-
 def _parse_pylint(results: dict[str, any]) -> list[IssueDTO]:
     dtos: list[IssueDTO] = []
     for item in results.get(ToolName.PYLINT, []):
         rule_id = item.get("message-id")
         metric_category = _get_metric_category_pylint(rule_id)
         metric_name = _get_metric_name_pylint(rule_id)
-        severity = _get_severity_pylint(rule_id)
+        severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -219,28 +188,12 @@ def _get_metric_name_pylint(rule_id: str) -> str:
     return PYLINT_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
 
 
-def _get_severity_pylint(rule_id: str) -> str:
-    PYLINT_SEVERITY_MAPPING = {
-        "R0915": SeverityLevel.HIGH,
-        "R0912": SeverityLevel.HIGH,
-
-        "R0902": SeverityLevel.MEDIUM,
-        "R0904": SeverityLevel.MEDIUM,
-        "R0913": SeverityLevel.MEDIUM,
-        "R1702": SeverityLevel.MEDIUM,
-
-        "W0613": SeverityLevel.MEDIUM
-    }
-
-    return PYLINT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
-
-
 def _parse_pydocstyle(results: dict[str, any]) -> list[IssueDTO]:
     dtos: list[IssueDTO] = []
     for item in results.get(ToolName.PYDOCSTYLE, []):
         rule_id = item.get("code")
         metric_name = _get_metric_name_pydocstyle(rule_id)
-        severity = _get_severity_pydocstyle(rule_id)
+        severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -266,17 +219,6 @@ def _get_metric_name_pydocstyle(rule_id: str) -> str:
     return PYDOCSTYLE_METRIC_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
 
 
-def _get_severity_pydocstyle(rule_id: str) -> str:
-    PYDOCSTYLE_SEVERITY_MAPPING = {
-        "D100": SeverityLevel.MEDIUM,
-        "D205": SeverityLevel.LOW,
-        "D400": SeverityLevel.LOW,
-        "D415": SeverityLevel.LOW
-    }
-
-    return PYDOCSTYLE_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)
-
-
 def _parse_radon(results: dict[str, any]) -> list[IssueDTO]:
     dtos: list[IssueDTO] = []
     for item in results.get(ToolName.RADON, []):
@@ -298,7 +240,7 @@ def _parse_pyright(results: dict[str, any]) -> list[IssueDTO]:
     for item in results.get(ToolName.PYRIGHT, {}).get("generalDiagnostics", []):
         rule_id = item.get("rule")
         metric_name = _get_metric_name_pyright(rule_id)
-        severity = _get_severity_pyright(rule_id)
+        severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -331,17 +273,3 @@ def _get_metric_name_pyright(rule_id: str) -> str:
     }
 
     return PYRIGHT_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
-
-
-def _get_severity_pyright(rule_id: str) -> str:
-    PYRIGHT_SEVERITY_MAPPING = {
-        "reportUndefinedVariable": SeverityLevel.HIGH,
-        "reportUnboundVariable": SeverityLevel.HIGH,
-        "reportReturnType": SeverityLevel.HIGH,
-
-        "reportUnusedVariable": SeverityLevel.MEDIUM,
-        "reportUnusedImport": SeverityLevel.MEDIUM,
-        "reportUnusedFunction": SeverityLevel.MEDIUM
-    }
-
-    return PYRIGHT_SEVERITY_MAPPING.get(rule_id, SeverityLevel.LOW)

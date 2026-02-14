@@ -4,6 +4,7 @@ from backend.db.dao.analysis_dao import insert_analysis, update_analysis_status
 from backend.db.dao.file_dao import insert_file
 from backend.db.dao.issue_dao import insert_issue
 from backend.db.dao.metric_summary_dao import insert_metric_summary
+from backend.db.dao.weight_dao import insert_adaptive_weights
 from backend.db.init_database import get_connection
 
 db_queue: Queue = Queue()
@@ -44,6 +45,9 @@ def db_writer_worker(queue: Queue):
             elif op_type == "update_analysis_status":
                 analysis_id, status = item[1], item[2]
                 update_analysis_status(analysis_id, status, conn)
+            elif op_type == "save_weights":
+                analysis_id, weights, Ek = item[1], item[2], item[3]
+                insert_adaptive_weights(analysis_id, weights, Ek, conn)
 
             conn.commit()
     finally:

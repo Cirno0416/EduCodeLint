@@ -9,7 +9,13 @@ DB_PATH = os.path.join(DATA_DIR, "ECL_code_quality.db")
 
 def get_connection():
     os.makedirs(DATA_DIR, exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(
+        DB_PATH,
+        timeout=10,                # 防止瞬间锁冲突
+        isolation_level=None       # 自动事务
+    )
+    conn.execute("PRAGMA journal_mode=WAL;")
+    return conn
 
 
 def init_db():
@@ -55,6 +61,17 @@ def init_db():
             line INTEGER,           -- 问题所在代码行号
             severity TEXT,          -- 问题严重程度
             message TEXT            -- 问题详细描述信息
+        );
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS weight_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            analysis_id TEXT NOT NULL,
+            metric_category TEXT NOT NULL,
+            weight REAL NOT NULL,
+            weighted_error REAL NOT NULL,   -- 该轮的 E_k 值
+            created_at TEXT NOT NULL
         );
     """)
 
