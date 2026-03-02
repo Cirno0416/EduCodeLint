@@ -2,7 +2,6 @@ import os
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import asdict
 from datetime import datetime, timezone
 
 from backend.constant.weights import DEFAULT_WEIGHTS
@@ -83,10 +82,11 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
     writer.join()
 
     return {
-        "status": "success",
         "analysis_id": analysis_id,
         "file_count": len(results),
-        "results": results
+        "weight_config": prev_weights,
+        "results": results,
+        "status": "success"
     }
 
 
@@ -123,7 +123,6 @@ def _analyze_one_file(
 
         return {
             "file_name": os.path.basename(path),
-            "issues": [asdict(d) for d in issues],      # 不返回也行
             "score": file.total_score,
             "status": "success",
             "summaries": summaries
@@ -135,7 +134,6 @@ def _analyze_one_file(
 
         return {
             "file_name": os.path.basename(path),
-            "issues": [],
             "status": "failed",
             "error": str(e),
             "summaries": []

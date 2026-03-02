@@ -2,6 +2,7 @@ from flask import Flask
 
 from route.analyze import analyze_bp
 from route.compare import compare_bp
+from route.record import record_bp
 from backend.db.init_database import init_db
 
 
@@ -13,6 +14,7 @@ def create_app():
     app = Flask(__name__)
     app.register_blueprint(analyze_bp)
     app.register_blueprint(compare_bp)
+    app.register_blueprint(record_bp)
 
     return app
 

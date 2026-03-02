@@ -45,7 +45,6 @@ class BaseDialog(QDialog):
 
 
 class DialogUtil:
-
     @staticmethod
     def warning(parent, text, title="提示"):
         dialog = BaseDialog(parent, title, text)

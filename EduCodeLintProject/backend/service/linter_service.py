@@ -196,7 +196,7 @@ def _collect_item_issues(item: dict, threshold: int) -> list:
                 "name": name,
                 "line": line,
                 "complexity": complexity,
-                "message": f"{object_type} `{name}` 圈复杂度 {complexity}",
+                "message": f"The cyclomatic complexity of {object_type} '{name}' is {complexity}",
             }
         )
 

@@ -107,6 +107,112 @@ def high_complexity(x: int) -> str:
         return "9"
     elif x == 10:
         return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
+    elif x == 10:
+        return "10"
     else:
         return "other"  # 13个分支，圈复杂度>10，触发radon检测
 

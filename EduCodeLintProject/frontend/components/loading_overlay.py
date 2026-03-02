@@ -10,10 +10,10 @@ class LoadingOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.setStyleSheet("""
-                    QWidget#loadingOverlay {
-                        background-color: rgba(0, 0, 0, 120);
-                    }
-                """)
+            QWidget#loadingOverlay {
+                background-color: rgba(0, 0, 0, 120);
+            }
+        """)
 
         # 主布局，铺满父窗口
         main_layout = QVBoxLayout(self)
@@ -31,11 +31,11 @@ class LoadingOverlay(QWidget):
         self.label = QLabel("正在分析，请稍候...")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setStyleSheet("""
-                    color: white;
-                    font-size: 18px;
-                    font-weight: bold;
-                    background: transparent;
-                """)
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            background: transparent;
+        """)
 
         # 进度条
         self.progress = QProgressBar()

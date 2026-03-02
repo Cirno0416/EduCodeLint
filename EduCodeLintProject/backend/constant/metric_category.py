@@ -13,7 +13,7 @@ METRIC_CATEGORIES = {
     MetricCategory.CODE_STYLE: "code_style",
     MetricCategory.CODE_SMELL: "code_smell",
     MetricCategory.COMPLEXITY: "complexity",
-    MetricCategory.POTENTIAL_ERROR: "security_vulnerability",
-    MetricCategory.SECURITY_VULNERABILITY: "potential_error",
+    MetricCategory.POTENTIAL_ERROR: "potential_error",
+    MetricCategory.SECURITY_VULNERABILITY: "security_vulnerability",
     MetricCategory.DOCUMENTATION: "documentation"
 }

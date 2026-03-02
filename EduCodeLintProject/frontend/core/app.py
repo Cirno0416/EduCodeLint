@@ -15,10 +15,10 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout()
 
         self.sidebar = Sidebar()
-        self.analysis_page = AnalyzePage()
+        self.analyze_page = AnalyzePage()
 
         layout.addWidget(self.sidebar)
-        layout.addWidget(self.analysis_page)
+        layout.addWidget(self.analyze_page)
 
         container.setLayout(layout)
         self.setCentralWidget(container)
