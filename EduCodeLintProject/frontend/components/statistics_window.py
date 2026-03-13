@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QLabel, QTabWidget, QWidget, QHBoxLayout
 )
 import matplotlib
+from matplotlib.axes import Axes
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
@@ -33,7 +34,7 @@ class StatisticsWindow(QDialog):
             return
 
         # ========= 顶部统计卡片 =========
-        layout.addWidget(create_summary_cards(files))
+        layout.addWidget(create_summary_cards(analysis_data))
 
         # ========= Tabs =========
         self.tabs = QTabWidget()
@@ -44,13 +45,15 @@ class StatisticsWindow(QDialog):
             MetricCategory.CODE_SMELL,
             MetricCategory.POTENTIAL_ERROR,
             MetricCategory.SECURITY_VULNERABILITY,
-            MetricCategory.DOCUMENTATION,
+            MetricCategory.DOCSTRING,
             MetricCategory.COMPLEXITY
         ]
 
         for cat in categories:
             if cat == MetricCategory.COMPLEXITY:
                 self.tabs.addTab(create_complexity_tab(files), cat)
+            elif cat == MetricCategory.DOCSTRING:
+                self.tabs.addTab(create_docstring_tab(files), cat)
             else:
                 self.tabs.addTab(create_general_tab(files, cat), cat)
 
@@ -58,9 +61,17 @@ class StatisticsWindow(QDialog):
 # ==================================================
 # 顶部统计卡片
 # ==================================================
-def create_summary_cards(files):
+def create_summary_cards(analysis_data):
+    files = analysis_data.get("results", [])
+    weight_config = analysis_data.get("weight_config", {})
+
     container = QWidget()
-    layout = QHBoxLayout(container)
+    layout = QVBoxLayout(container)
+
+    # ========================
+    # 基础统计卡片
+    # ========================
+    stats_layout = QHBoxLayout()
 
     total_files = len(files)
     total_issues = sum(
@@ -82,15 +93,41 @@ def create_summary_cards(files):
         card = QLabel(f"{title}\n{value}")
         card.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card.setStyleSheet("""
-            QLabel {
-                background-color: #f5f6fa;
-                border-radius: 10px;
-                padding: 20px;
-                font-size: 18px;
-                font-weight: bold;
-            }
-        """)
-        layout.addWidget(card)
+                QLabel {
+                    background-color: #f5f6fa;
+                    border-radius: 10px;
+                    padding: 20px;
+                    font-size: 18px;
+                    font-weight: bold;
+                }
+            """)
+        stats_layout.addWidget(card)
+
+    layout.addLayout(stats_layout)
+
+    # ========================
+    # 权重展示
+    # ========================
+    weight_layout = QHBoxLayout()
+
+    for key, weight in weight_config.items():
+        percent = round(weight * 100, 1)
+
+        card = QLabel(f"{key}\n{percent}%")
+        card.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card.setStyleSheet("""
+                QLabel {
+                    background-color: #ffffff;
+                    border: 1px solid #dcdde1;
+                    border-radius: 8px;
+                    padding: 15px;
+                    font-size: 14px;
+                    font-weight: bold;
+                }
+            """)
+        weight_layout.addWidget(card)
+
+    layout.addLayout(weight_layout)
 
     return container
 
@@ -128,58 +165,21 @@ def create_general_tab(files, category):
     # ===============================
     ax1 = figure.add_subplot(211)
 
-    if metric_count:
-        sorted_items = sorted(
+    # 按照问题数量排序，问题多的指标排在上面
+    sorted_metric_count = dict(
+        sorted(
             metric_count.items(),
             key=lambda x: x[1],
             reverse=True
         )
+    )
 
-        values = [i[1] for i in sorted_items]
-        labels = [i[0] for i in sorted_items]
-
-        y_pos = list(range(len(labels)))
-
-        bars = ax1.barh(y_pos, values, height=0.5)
-
-        ax1.set_yticks(y_pos)
-        ax1.set_yticklabels(labels)
-
-        if len(labels) == 1:
-            ax1.set_ylim(-0.8, 0.8)
-        else:
-            ax1.set_ylim(-0.5, len(labels) - 0.5)
-
-        max_value = max(values)
-
-        # 留白
-        ax1.set_xlim(0, max_value * 1.15)
-        ax1.set_ymargin(0.1)
-
-        # 1% 的横轴长度
-        offset = ax1.get_xlim()[1] * 0.01
-
-        # 使用 bars 精准贴柱
-        for bar in bars:
-            width = bar.get_width()
-            ax1.text(
-                width + offset,
-                bar.get_y() + bar.get_height() / 2,
-                str(int(width)),
-                va='center',
-                ha='left'
-            )
-
-        # 横坐标为整数
-        ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
-
-        ax1.set_title("二级指标数量")
-        ax1.set_xlabel("问题数量")
-        ax1.grid(axis='x', linestyle='--', alpha=0.5)
-        ax1.invert_yaxis()
-
-    else:
-        ax1.text(0.5, 0.5, "无数据", ha="center")
+    draw_horizontal_bar_chart(
+        ax=ax1,
+        data_dict=sorted_metric_count,
+        title="二级指标数量",
+        xlabel="问题数量"
+    )
 
     # ===============================
     # 子图2：严重度比例
@@ -188,47 +188,28 @@ def create_general_tab(files, category):
 
     total = sum(severity_count.values())
 
-    if total > 0:
-        labels = []
-        values = []
+    severity_list = [SeverityLevel.LOW, SeverityLevel.MEDIUM, SeverityLevel.HIGH]
+    color_map = {
+        SeverityLevel.LOW: "#5CB85C",       # 绿色
+        SeverityLevel.MEDIUM: "#F0AD4E",    # 橙色
+        SeverityLevel.HIGH: "#D9534F"       # 红色
+    }
 
-        for k in [SeverityLevel.LOW, SeverityLevel.MEDIUM, SeverityLevel.HIGH]:
-            count = severity_count[k]
-            percent = round(count / total * 100, 1)
-            labels.append(f"{k} ({percent}%)")
-            values.append(count)
+    severity_display = {}
 
-        y_pos = range(len(labels))
-        bars = ax2.barh(y_pos, values, height=0.5)
+    for k in severity_list:
+        count = severity_count[k]
+        percent = round(count / total * 100, 1)
+        severity_display[f"{k} ({percent}%)"] = count
 
-        ax2.set_yticks(y_pos)
-        ax2.set_yticklabels(labels)
-
-        max_value = max(values)
-        ax2.set_xlim(0, max_value * 1.15)
-        ax2.set_ymargin(0.1)
-
-        offset = ax1.get_xlim()[1] * 0.01
-
-        for bar in bars:
-            width = bar.get_width()
-            ax2.text(
-                width + offset,
-                bar.get_y() + bar.get_height() / 2,
-                str(int(width)),
-                va='center',
-                ha='left'
-            )
-
-        # 横坐标为整数
-        ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
-
-        ax2.set_title("严重度比例")
-        ax2.set_xlabel("问题数量")
-        ax2.grid(axis='x', linestyle='--', alpha=0.5)
-
-    else:
-        ax2.text(0.5, 0.5, "无严重度数据", ha="center")
+    draw_horizontal_bar_chart(
+        ax=ax2,
+        data_dict=severity_display,
+        title="严重度比例",
+        xlabel="问题数量",
+        invert_y=False,
+        colors=[color_map[k] for k in severity_list]
+    )
 
     # 固定布局，不自动缩放
     figure.subplots_adjust(
@@ -261,13 +242,14 @@ def create_complexity_tab(files):
             for issue in s.get("issues", []):
                 try:
                     complexity_value = int(issue.get("rule_id", 0))
+                    # 超过31的复杂度都归为31，避免极端值拉长图表
                     complexity_value = min(31, complexity_value)
                     complexity_values.append(complexity_value)
                     found = True
                 except:
                     pass
 
-        # 低复杂度默认为10
+        # 低复杂度的不会返回issue所以找不到，默认为10
         if not found:
             complexity_values.append(10)
 
@@ -315,7 +297,7 @@ def create_complexity_tab(files):
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_title("各文件最大圈复杂度分布")
-    ax.set_xlabel("最大复杂度")
+    ax.set_xlabel("最大圈复杂度")
     ax.set_ylabel("文件数量")
     ax.grid(axis='y', linestyle='--', alpha=0.5)
 
@@ -327,3 +309,118 @@ def create_complexity_tab(files):
     )
 
     return canvas
+
+
+# ==================================================
+# 注释与文档
+# ==================================================
+def create_docstring_tab(files):
+    figure = Figure(figsize=(6, 5), dpi=100)
+    canvas = FigureCanvas(figure)
+    canvas.setFixedSize(650, 500)
+
+    STANDARD_DOCSTRING = "standard_docstring"
+    metric_count = {
+        STANDARD_DOCSTRING: 0,
+        MetricName.NONSTANDARD_DOCSTRING: 0,
+        MetricName.MISSING_MODULE_DOCSTRING: 0,
+    }
+
+    for f in files:
+        found = False
+        for s in f.get("summaries", []):
+            if s.get("metric_category") != MetricCategory.DOCSTRING:
+                continue
+
+            for issue in s.get("issues", []):
+                metric = issue.get("metric_name", MetricName.UNKNOWN_METRIC_NAME)
+                metric_count[metric] = metric_count[metric] + 1
+                found = True
+                break  # 每个文件同一指标只计数一次
+
+        if not found:
+            metric_count[STANDARD_DOCSTRING] = metric_count[STANDARD_DOCSTRING] + 1
+
+    ax = figure.add_subplot(211)
+
+    draw_horizontal_bar_chart(
+        ax=ax,
+        data_dict=metric_count,
+        title="注释情况统计",
+        xlabel="文件数量",
+    )
+
+    # 固定布局，不自动缩放
+    figure.subplots_adjust(
+        left=0.30,
+        right=0.95,
+        top=0.92,
+        bottom=0.08,
+        hspace=0.4
+    )
+
+    return canvas
+
+
+def draw_horizontal_bar_chart(
+        ax: Axes,
+        data_dict,
+        title,
+        xlabel,
+        invert_y=True,
+        colors=None
+):
+    """
+    通用横向柱状图绘制函数
+    """
+    if not data_dict:
+        ax.text(0.5, 0.5, "无相关问题或数据", ha="center")
+        return
+
+    items = list(data_dict.items())
+    values = [v for k, v in items]
+    labels = [k for k, v in items]
+    y_pos = list(range(len(labels)))
+
+    bars = ax.barh(
+        y_pos,
+        values,
+        height=0.5,
+        color=colors
+    )
+
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels)
+
+    # 处理单柱情况
+    if len(labels) == 1:
+        ax.set_ylim(-0.8, 0.8)
+    else:
+        ax.set_ylim(-0.5, len(labels) - 0.5)
+
+    max_value = max(values)
+
+    # 留白
+    ax.set_xlim(0, max_value * 1.15)
+    ax.set_ymargin(0.1)
+
+    offset = ax.get_xlim()[1] * 0.01
+
+    for bar in bars:
+        width = bar.get_width()
+        ax.text(
+            width + offset,
+            bar.get_y() + bar.get_height() / 2,
+            str(int(width)),
+            va='center',
+            ha='left'
+        )
+
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.grid(axis='x', linestyle='--', alpha=0.5)
+
+    if invert_y:
+        ax.invert_yaxis()

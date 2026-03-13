@@ -60,3 +60,19 @@ def insert_adaptive_weights(analysis_id: str, weights: dict, E_k: dict, conn: sq
         ))
 
     conn.commit()
+
+
+def get_weights_by_analysis_id(analysis_id: str, conn: sqlite3.Connection) -> dict:
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT metric_category, weight
+        FROM weight_history
+        WHERE analysis_id = ?
+    """, (analysis_id,))
+
+    weight_config = {}
+    for cat, w in cursor.fetchall():
+        weight_config[cat] = w
+
+    return weight_config

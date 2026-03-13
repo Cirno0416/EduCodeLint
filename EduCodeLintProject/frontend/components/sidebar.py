@@ -10,11 +10,11 @@ class Sidebar(QWidget):
 
         self.btn_analysis = QPushButton("代码分析")
         self.btn_compare = QPushButton("批次对比")
-        self.btn_history = QPushButton("历史记录")
+        self.btn_record = QPushButton("历史记录")
 
         layout.addWidget(self.btn_analysis)
         layout.addWidget(self.btn_compare)
-        layout.addWidget(self.btn_history)
+        layout.addWidget(self.btn_record)
         layout.addStretch()
 
         self.setLayout(layout)

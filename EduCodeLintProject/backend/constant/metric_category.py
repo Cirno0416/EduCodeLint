@@ -4,7 +4,7 @@ class MetricCategory:
     COMPLEXITY = "complexity"
     SECURITY_VULNERABILITY = "security_vulnerability"
     POTENTIAL_ERROR = "potential_error"
-    DOCUMENTATION = "documentation"
+    DOCSTRING = "docstring"
 
     UNKNOWN_METRIC_CATEGORY = "unknown_metric_category"
 
@@ -15,5 +15,5 @@ METRIC_CATEGORIES = {
     MetricCategory.COMPLEXITY: "complexity",
     MetricCategory.POTENTIAL_ERROR: "potential_error",
     MetricCategory.SECURITY_VULNERABILITY: "security_vulnerability",
-    MetricCategory.DOCUMENTATION: "documentation"
+    MetricCategory.DOCSTRING: "docstring"
 }

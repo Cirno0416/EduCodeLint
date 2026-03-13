@@ -2,7 +2,9 @@ import os
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime
+
+import pytz
 
 from backend.constant.weights import DEFAULT_WEIGHTS
 from backend.db.dao.weight_dao import get_latest_weights_and_Ek
@@ -16,13 +18,16 @@ from backend.service.linter_service import run_linters
 from backend.service.issue_parse_service import parse_issues_to_dtos
 
 
+local_tz = pytz.timezone('Asia/Shanghai')
+
+
 def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
     analysis_id = _generate_analysis_id()
 
     analysis = AnalysisDTO(
         id=analysis_id,
         file_count=len(paths),
-        created_at=datetime.now(timezone.utc).isoformat()
+        created_at=datetime.now(local_tz).isoformat()
     )
 
     # 启动数据库写线程（唯一写入口）
@@ -97,7 +102,7 @@ def _analyze_one_file(
 ) -> dict:
     if not path or not os.path.isfile(path) or not path.endswith(".py"):
         return {
-            "file_name": os.path.basename(path),
+            "file_path": path,
             "issues": [],
             "status": "invalid"
         }
@@ -122,7 +127,7 @@ def _analyze_one_file(
         db_queue.put(("update_analysis_status", analysis_id, "success"))
 
         return {
-            "file_name": os.path.basename(path),
+            "file_path": path,
             "score": file.total_score,
             "status": "success",
             "summaries": summaries
@@ -133,7 +138,7 @@ def _analyze_one_file(
         db_queue.put(("update_analysis_status", analysis_id, "failed"))
 
         return {
-            "file_name": os.path.basename(path),
+            "file_path": path,
             "status": "failed",
             "error": str(e),
             "summaries": []

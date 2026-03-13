@@ -1,5 +1,6 @@
 import sqlite3
 
+from backend.db.init_database import get_connection
 from backend.entity.dto.file_dto import FileDTO
 from backend.entity.vo.file_vo import FileVO
 
@@ -39,3 +40,12 @@ def get_files_by_analysis_id(analysis_id: str, conn) -> list[FileVO]:
         )
         for r in rows
     ]
+
+
+def delete_files_by_analysis_id(analysis_id: str, conn):
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM file
+        WHERE analysis_id = ?
+    """, (analysis_id,))

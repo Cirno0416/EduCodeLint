@@ -17,7 +17,7 @@ def calc_file_score(summaries: list[MetricSummaryDTO]) -> float:
     for summary in summaries:
         if summary.metric_category in category_scores:
             category_scores[summary.metric_category] = summary.score
-        elif summary.metric_category == MetricCategory.DOCUMENTATION:
+        elif summary.metric_category == MetricCategory.DOCSTRING:
             r = summary.score
 
     for category, weight in WEIGHTS.items():
@@ -75,7 +75,7 @@ def _calc_score(metric_category: str, issues: list[IssueDTO]) -> float:
         for issue in issues:
             score -= SeverityLevel.COEFFICIENTS[issue.severity]
 
-    elif metric_category == MetricCategory.DOCUMENTATION:
+    elif metric_category == MetricCategory.DOCSTRING:
         score = 1.0
         for issue in issues:
             if issue.metric_name == MetricName.MISSING_MODULE_DOCSTRING:

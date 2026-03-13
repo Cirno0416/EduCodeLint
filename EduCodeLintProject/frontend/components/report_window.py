@@ -14,7 +14,7 @@ class ReportWindow(QDialog):
     def __init__(self, file_data):
         super().__init__()
 
-        self.setWindowTitle(f"分析报告 - {file_data.get('file_name', '')}")
+        self.setWindowTitle(f"分析报告 - {file_data.get('file_path', '')}")
         self.resize(900, 600)
 
         layout = QVBoxLayout(self)
@@ -44,7 +44,7 @@ class ReportWindow(QDialog):
         """)
 
         # 文件名
-        file_label = QLabel(file_data['file_name'])
+        file_label = QLabel(file_data['file_path'])
         file_font = QFont()
         file_font.setPointSize(16)
         file_font.setBold(True)

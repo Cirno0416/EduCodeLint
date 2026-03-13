@@ -1,7 +1,6 @@
 [pydocstyle]
 select =
     D100,
-    D400,
     D205,
     D415
 

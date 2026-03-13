@@ -47,3 +47,11 @@ def get_issues_by_metric_summary_id(summary_id: int, conn) -> list[IssueVO]:
         )
         for r in rows
     ]
+
+
+def delete_issues_by_metric_summary_id(summary_id: int, conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM issue
+        WHERE metric_summary_id = ?
+    """, (summary_id,))

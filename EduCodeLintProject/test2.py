@@ -1,3 +1,7 @@
+"""
+and calculates the final quality score
+and calculates the final quality score
+"""
 # 测试flake8：未使用的导入（unused-import）
 import math  # 未使用此导入
 

@@ -65,6 +65,21 @@ def init_db():
     """)
 
     cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_file_analysis
+        ON file(analysis_id);
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_metric_file
+        ON metric_summary(file_id);
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_issue_metric
+        ON issue(metric_summary_id);
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS weight_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             analysis_id TEXT NOT NULL,

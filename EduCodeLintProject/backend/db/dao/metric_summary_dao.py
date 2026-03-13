@@ -44,3 +44,11 @@ def get_metric_summaries_by_file_id(file_id: int, conn) -> list[MetricSummaryVO]
         )
         for r in rows
     ]
+
+
+def delete_metric_summaries_by_file_id(file_id: int, conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM metric_summary
+        WHERE file_id = ?
+    """, (file_id,))

@@ -1,21 +1,21 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
-class AnalyzeWorker(QObject):
+class RecordWorker(QObject):
     finished = pyqtSignal(dict)
     error = pyqtSignal(str)
 
-    def __init__(self, controller, files, exclude_tools):
+    def __init__(self, controller, page, page_size):
         super().__init__()
         self.controller = controller
-        self.files = files
-        self.exclude_tools = exclude_tools
+        self.page = page
+        self.page_size = page_size
 
     def run(self):
         try:
-            result = self.controller.analyze(
-                self.files,
-                self.exclude_tools
+            result = self.controller.get_records(
+                self.page,
+                self.page_size
             )
             self.finished.emit(result)
         except Exception as e:

@@ -91,7 +91,7 @@ def _get_metric_category_flake8(code_val: str) -> str:
     if code_val.startswith("C"):
         return MetricCategory.COMPLEXITY
     elif code_val.startswith("D"):
-        return MetricCategory.DOCUMENTATION
+        return MetricCategory.DOCSTRING
     elif code_val.startswith(("E", "W", "N")):
         return MetricCategory.CODE_STYLE
     elif code_val.startswith("F"):
@@ -198,7 +198,7 @@ def _parse_pydocstyle(results: dict[str, any]) -> list[IssueDTO]:
         dtos.append(IssueDTO(
             metric_summary_id=-1,
             tool=ToolName.PYDOCSTYLE,
-            metric_category=MetricCategory.DOCUMENTATION,
+            metric_category=MetricCategory.DOCSTRING,
             metric_name=metric_name,
             rule_id=rule_id,
             line=item.get("line"),
@@ -212,7 +212,6 @@ def _get_metric_name_pydocstyle(rule_id: str) -> str:
     PYDOCSTYLE_METRIC_MAPPING = {
         "D100": MetricName.MISSING_MODULE_DOCSTRING,
         "D205": MetricName.NONSTANDARD_DOCSTRING,
-        "D400": MetricName.NONSTANDARD_DOCSTRING,
         "D415": MetricName.NONSTANDARD_DOCSTRING
     }
 
