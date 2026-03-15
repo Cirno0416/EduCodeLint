@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QFont
 
-from frontend.components.report_window import ReportWindow
+from frontend.components.analyze_report_window import AnalyzeReportWindow
 from frontend.components.statistics_window import StatisticsWindow
 from frontend.utils.dialog_util import DialogUtil
 
@@ -121,7 +121,7 @@ class ScoreDashboard(QWidget):
     # 打开单文件详细报告
     # =============================
     def open_report(self, file_data):
-        dialog = ReportWindow(file_data)
+        dialog = AnalyzeReportWindow(file_data)
         dialog.exec()
 
     # =============================

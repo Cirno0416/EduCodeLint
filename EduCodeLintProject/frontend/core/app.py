@@ -22,8 +22,8 @@ class MainWindow(QMainWindow):
 
         self.sidebar = Sidebar()
         self.analyze_page = AnalyzePage()
-        self.compare_page = ComparePage()
         self.record_page = RecordPage()
+        self.compare_page = ComparePage(record_page=self.record_page)
 
         # 页面容器
         self.stack = QStackedWidget()
@@ -54,10 +54,12 @@ class MainWindow(QMainWindow):
     def show_page(self, index: int):
         """
         切换页面，同时处理特殊逻辑：
-        - 历史记录页面切换时自动刷新
+        - 批次对比、历史记录页面切换时自动刷新
         """
         self.stack.setCurrentIndex(index)
 
-        # 如果切换到历史记录页面，自动刷新
+        # 如果切换到批次对比、历史记录页面，自动刷新
         if index == self.PAGE_RECORD:
             self.record_page.load_records()
+        elif index == self.PAGE_COMPARE:
+            self.compare_page.load_records()

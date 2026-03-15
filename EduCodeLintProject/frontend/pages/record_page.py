@@ -1,15 +1,17 @@
 from datetime import datetime
+from functools import partial
 
 import pytz
-from PyQt6.QtCore import QThread, Qt
+from PyQt6.QtCore import QThread, Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout,
     QLabel, QTableWidget,
     QTableWidgetItem,
-    QHeaderView, QSpinBox, QPushButton, QComboBox, QHBoxLayout, QMessageBox
+    QHeaderView, QPushButton, QMessageBox
 )
 
+from frontend.components.pagination import Pagination
 from frontend.components.score_dashboard import ScoreDashboard
 from frontend.controllers.record_controller import RecordController
 from frontend.core.analysis_detail_worker import AnalysisDetailWorker
@@ -19,6 +21,8 @@ from frontend.utils.dialog_util import DialogUtil
 
 
 class RecordPage(QWidget):
+    record_deleted = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
 
@@ -87,6 +91,7 @@ class RecordPage(QWidget):
 
         font = QFont()
         font.setBold(True)
+        font.setPointSize(10)
         header.setFont(font)
 
         layout.addWidget(self.table)
@@ -94,54 +99,11 @@ class RecordPage(QWidget):
         # ==============================
         # 分页控件
         # ==============================
-        pagination_layout = QHBoxLayout()
+        self.pagination = Pagination(self.page, self.page_size)
+        self.pagination.page_changed.connect(self.on_page_changed)
+        self.pagination.page_size_changed.connect(self.on_page_size_changed)
 
-        # 上一页按钮
-        self.prev_btn = QPushButton("上一页")
-        self.prev_btn.clicked.connect(self.go_to_prev_page)
-        self.prev_btn.setEnabled(False)  # 初始时禁用
-
-        # 页码显示
-        self.page_label = QLabel(f"第 {self.page} 页")
-        self.page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # 下一页按钮
-        self.next_btn = QPushButton("下一页")
-        self.next_btn.clicked.connect(self.go_to_next_page)
-        self.next_btn.setEnabled(False)  # 初始时禁用
-
-        # 跳转页码输入
-        self.jump_label = QLabel("跳转到:")
-        self.jump_spinbox = QSpinBox()
-        self.jump_spinbox.setRange(1, 1)  # 初始范围只有第1页
-        self.jump_spinbox.setFixedWidth(50)
-        self.jump_spinbox.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
-        self.jump_btn = QPushButton("Go")
-        self.jump_btn.clicked.connect(self.jump_to_page)
-
-        # 每页显示数量选择
-        self.page_size_label = QLabel("每页显示:")
-        self.page_size_combo = QComboBox()
-        self.page_size_combo.addItems(["10", "20", "50"])
-        self.page_size_combo.setCurrentText(str(self.page_size))
-        self.page_size_combo.currentTextChanged.connect(self.on_page_size_changed)
-
-        # 总记录数显示
-        self.total_label = QLabel("共 0 条记录")
-
-        pagination_layout.addWidget(self.prev_btn)
-        pagination_layout.addWidget(self.page_label)
-        pagination_layout.addWidget(self.next_btn)
-        pagination_layout.addStretch()
-        pagination_layout.addWidget(self.jump_label)
-        pagination_layout.addWidget(self.jump_spinbox)
-        pagination_layout.addWidget(self.jump_btn)
-        pagination_layout.addStretch()
-        pagination_layout.addWidget(self.page_size_label)
-        pagination_layout.addWidget(self.page_size_combo)
-        pagination_layout.addWidget(self.total_label)
-
-        layout.addLayout(pagination_layout)
+        layout.addWidget(self.pagination)
 
         # 这里是空隙
         layout.addSpacing(30)
@@ -162,10 +124,9 @@ class RecordPage(QWidget):
         if self.loading_records:
             return
 
-        self.loading_records = True
+        self.table.clearSelection()
 
-        # 禁用分页按钮，防止重复点击
-        self.set_pagination_enabled(False)
+        self.loading_records = True
 
         self.record_thread = QThread()
         self.worker = RecordWorker(
@@ -218,63 +179,50 @@ class RecordPage(QWidget):
             self.table.setItem(row, 3, QTableWidgetItem(r["status"]))
 
             btn_delete = QPushButton("删除")
-            btn_delete.clicked.connect(lambda checked, rid=r["id"]: self.delete_record(rid))
+            btn_delete.clicked.connect(
+                partial(self.delete_record, r["id"])
+            )
             self.table.setCellWidget(row, 4, btn_delete)
 
-        # 更新分页控件状态
-        self.update_pagination_controls()
+        self.pagination.update_pagination(
+            self.page,
+            self.total_pages,
+            self.total_records
+        )
+
+        # 重置选择高亮
+        self.restore_selection()
 
     def on_load_finished(self):
         """线程结束后重置状态"""
         self.loading_records = False
-        self.set_pagination_enabled(True)
 
-    def set_pagination_enabled(self, enabled):
-        """设置分页控件的启用状态"""
-        self.prev_btn.setEnabled(enabled and self.page > 1)
-        self.next_btn.setEnabled(enabled and self.page < self.total_pages)
-        self.jump_btn.setEnabled(enabled)
-        self.jump_spinbox.setEnabled(enabled)
-        self.page_size_combo.setEnabled(enabled)
+    def restore_selection(self):
+        """根据 analysis_id 恢复选中状态"""
+        if not self.current_analysis_id:
+            return
 
-    def update_pagination_controls(self):
-        """更新分页控件显示"""
-        self.page_label.setText(f"第 {self.page} 页 / 共 {self.total_pages} 页")
-        self.total_label.setText(f"共 {self.total_records} 条记录")
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
 
-        # 更新跳转输入框的范围
-        self.jump_spinbox.setRange(1, self.total_pages)
-        self.jump_spinbox.setValue(self.page)
+            if not item:
+                continue
 
-        # 更新按钮状态
-        self.prev_btn.setEnabled(self.page > 1)
-        self.next_btn.setEnabled(self.page < self.total_pages)
+            if item.text() == self.current_analysis_id:
+                self.table.selectRow(row)
+                return
 
-    def go_to_prev_page(self):
-        """前往上一页"""
-        if self.page > 1:
-            self.page -= 1
-            self.load_records()
+        # 当前页没有该记录则取消选中
+        self.table.clearSelection()
 
-    def go_to_next_page(self):
-        """前往下一页"""
-        if self.page < self.total_pages:
-            self.page += 1
-            self.load_records()
+    def on_page_changed(self, page):
+        self.page = page
+        self.load_records()
 
-    def jump_to_page(self):
-        """跳转到指定页"""
-        target_page = self.jump_spinbox.value()
-        if target_page != self.page:
-            self.page = target_page
-            self.load_records()
-
-    def on_page_size_changed(self, page_size_text):
-        """每页显示数量改变"""
-        new_page_size = int(page_size_text)
-        if new_page_size != self.page_size:
-            self.page_size = new_page_size
-            self.page = 1  # 重置到第一页
+    def on_page_size_changed(self, page_size):
+        if page_size != self.page_size:
+            self.page_size = page_size
+            self.page = 1
             self.load_records()
 
     def on_record_clicked(self, row, column):
@@ -346,6 +294,9 @@ class RecordPage(QWidget):
         if reply == QMessageBox.StandardButton.No:
             return
 
+        # 记录删除的id，用于回调
+        self.deleted_analysis_id = analysis_id
+
         self.delete_thread = QThread()
         self.worker = DeleteRecordWorker(
             self.controller,
@@ -369,6 +320,11 @@ class RecordPage(QWidget):
         if result.get("code") != 0:
             DialogUtil.error(self, result.get("msg"))
             return
+
+        deleted_id = getattr(self, "deleted_analysis_id", None)
+        if deleted_id:
+            # 发出记录删除信号，通知其他组件更新
+            self.record_deleted.emit(deleted_id)
 
         # 如果删除的是当前选中的记录可能导致状态异常
         self.current_analysis_id = None

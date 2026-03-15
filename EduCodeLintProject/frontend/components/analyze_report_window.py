@@ -10,7 +10,7 @@ from PyQt6.QtGui import QFont, QColor
 from backend.constant.severity_level import SeverityLevel
 
 
-class ReportWindow(QDialog):
+class AnalyzeReportWindow(QDialog):
     def __init__(self, file_data):
         super().__init__()
 
