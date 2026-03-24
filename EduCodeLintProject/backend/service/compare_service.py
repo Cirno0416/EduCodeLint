@@ -1,8 +1,187 @@
+import math
 from collections import defaultdict
 
 from backend.constant.metric_category import METRIC_CATEGORIES
-from backend.constant.metric_name import MetricName
-from backend.constant.weights import WEIGHTS
+from backend.constant.weights import DEFAULT_WEIGHTS
+
+
+def compare_multiple_batches(batch_list: list[dict]) -> dict:
+    # 批次分析 + 基础结果
+    batch_results, metrics_summary = _analyze_and_collect_batches(batch_list)
+
+    # 共性问题分析
+    common_issues = _calculate_common_issues(metrics_summary)
+
+    return {
+        "batches": batch_results,
+        "metrics_summary": metrics_summary,
+        "common_issues": common_issues
+    }
+
+
+def _analyze_and_collect_batches(batch_list):
+    """批次分析 + 聚合"""
+    batch_results = []
+    metrics_summary = _init_metrics_summary()
+
+    for batch in batch_list:
+        analysis = _analyze_single_batch(batch)
+
+        batch_info = _build_batch_info(batch, analysis)
+        batch_results.append(batch_info)
+
+        _aggregate_metrics_summary(metrics_summary, batch, analysis)
+
+    return batch_results, metrics_summary
+
+
+def _init_metrics_summary():
+    """初始化 summary 结构"""
+    return {
+        category: {
+            "avg_score": [],
+            "avg_issues_per_file": [],
+            "files_with_issues_percentage": [],
+            "severity_distribution": [],
+            "secondary_metrics": []
+        }
+        for category in METRIC_CATEGORIES.keys()
+    }
+
+
+def _build_batch_info(batch, analysis):
+    """构建单个 batch 信息"""
+    weight_config = batch.get("weight_config", {}) or DEFAULT_WEIGHTS
+
+    weighted_score = _calculate_weighted_score(
+        analysis["metrics"],
+        weight_config
+    )
+
+    return {
+        "id": batch["analysis_id"],
+        "created_at": batch["created_at"],
+        "file_count": analysis["file_count"],
+        "weighted_score": round(weighted_score, 2),
+        "metrics": analysis["metrics"]
+    }
+
+
+def _aggregate_metrics_summary(metrics_summary, batch, analysis):
+    """聚合 metrics"""
+    for category, data in analysis["metrics"].items():
+        metrics_summary[category]["avg_score"].append({
+            "analysis_id": batch["analysis_id"],
+            "value": round(data["avg_score"], 2)
+        })
+
+        metrics_summary[category]["avg_issues_per_file"].append({
+            "analysis_id": batch["analysis_id"],
+            "value": round(data["avg_issues_per_file"], 2)
+        })
+
+        metrics_summary[category]["files_with_issues_percentage"].append({
+            "analysis_id": batch["analysis_id"],
+            "value": round(data["files_with_issues_percentage"], 1)
+        })
+
+        metrics_summary[category]["severity_distribution"].append({
+            "analysis_id": batch["analysis_id"],
+            "value": data["avg_severity_count"]
+        })
+
+        metrics_summary[category]["secondary_metrics"].append({
+            "analysis_id": batch["analysis_id"],
+            "value": data["avg_issues_by_name"]
+        })
+
+
+def _calculate_common_issues(metrics_summary):
+    """全局共性问题分析（跨所有category）"""
+    all_metric_stats = []
+
+    for category, data in metrics_summary.items():
+        secondary_list = data["secondary_metrics"]
+        total_batches = len(secondary_list)
+
+        if total_batches == 0:
+            continue
+
+        metric_values_map = _build_metric_values_map(secondary_list)
+
+        stats = _calculate_metric_stats(
+            metric_values_map,
+            total_batches,
+            category
+        )
+
+        all_metric_stats.extend(stats)
+
+    # ===== 全局筛选 + 排序 =====
+    return _filter_and_sort_global_common_metrics(all_metric_stats)
+
+
+def _build_metric_values_map(secondary_list):
+    """构建 metric_values_map"""
+    metric_values_map = defaultdict(list)
+
+    all_metric_names = set()
+    for item in secondary_list:
+        all_metric_names.update(item["value"].keys())
+
+    for metric_name in all_metric_names:
+        for item in secondary_list:
+            metric_dict = item["value"]
+            metric_values_map[metric_name].append(
+                metric_dict.get(metric_name, 0)
+            )
+
+    return metric_values_map
+
+
+def _calculate_metric_stats(metric_values_map, total_batches, category):
+    """计算统计值（增加 category 信息）"""
+    stats = []
+
+    for metric_name, values in metric_values_map.items():
+        appear_count = sum(1 for v in values if v > 0)
+        support = appear_count / total_batches
+
+        mean_val = sum(values) / total_batches
+
+        variance = sum((v - mean_val) ** 2 for v in values) / total_batches
+        std_val = math.sqrt(variance)
+
+        # 计算公式
+        common_score = support * mean_val / (1 + std_val)
+
+        stats.append({
+            "metric_name": metric_name,
+            "category": category,
+            "support": round(support, 2),
+            "mean": round(mean_val, 2),
+            "std": round(std_val, 2),
+            "common_score": round(common_score, 2)
+        })
+
+    return stats
+
+
+def _filter_and_sort_global_common_metrics(metric_stats):
+    """全局筛选 + 排序"""
+    # 过滤低共性
+    filtered = [
+        m for m in metric_stats if m["support"] >= 0.5
+    ]
+
+    # 排序
+    filtered.sort(
+        key=lambda x: x["common_score"],
+        reverse=True
+    )
+
+    # 取 Top10
+    return filtered[:10]
 
 
 def _calc_metric_stats(summaries: list) -> dict[str, dict[str, any]]:
@@ -40,8 +219,7 @@ def _calc_metric_stats(summaries: list) -> dict[str, dict[str, any]]:
 
 def _analyze_single_batch(batch_data: dict) -> dict[str, any]:
     """
-    分析单个批次的数据
-    - 计算每个维度的问题数、得分、文件中问题严重度分布
+    分析单个批次的数据，计算每个维度的问题数、得分、文件中问题严重度分布
     """
     file_count = batch_data["file_count"]
 
@@ -89,78 +267,25 @@ def _analyze_single_batch(batch_data: dict) -> dict[str, any]:
             metric_name: count / file_count for metric_name, count in stats["issues_by_name"].items()
         }
 
+        # 计算严重程度平均每文件问题数
+        avg_severity_count = {
+            severity: count / file_count if file_count else 0
+            for severity, count in stats["severity_counts"].items()
+        }
+
         metrics_result[category] = {
             **stats,
             "avg_issues_per_file": stats["total_issues"] / file_count if file_count else 0,
             "avg_score": stats["total_score"] / file_count if file_count else 0,
             "files_with_issues_percentage": (stats["files_with_issues"] / file_count * 100
                                              if file_count else 0),
-            "severity_counts": dict(stats["severity_counts"]),
+            "avg_severity_count": avg_severity_count,
             "avg_issues_by_name": avg_issues_by_name
         }
 
     return {
         "file_count": file_count,
         "metrics": metrics_result
-    }
-
-
-def _calculate_metric_comparison(batch1_metrics: dict, batch2_metrics: dict) -> dict[str, any]:
-    """计算单个指标及二级指标的对比结果"""
-
-    def _get_trend(diff: float, metric_type: str = "score") -> str:
-        if abs(diff) < 0.001:
-            return "unchanged"
-        if metric_type == "score":
-            return "improved" if diff > 0 else "worsened"
-        return "improved" if diff < 0 else "worsened"
-
-    # 总体问题数与分数
-    issues_diff = batch2_metrics["avg_issues_per_file"] - batch1_metrics["avg_issues_per_file"]
-    score_diff = batch2_metrics["avg_score"] - batch1_metrics["avg_score"]
-
-    # 二级指标对比
-    secondary_diff = {}
-    all_secondary_keys = set(batch1_metrics.get("avg_issues_by_name", {}).keys()) | \
-                         set(batch2_metrics.get("avg_issues_by_name", {}).keys())
-
-    for key in all_secondary_keys:
-        b1_count = batch1_metrics.get("avg_issues_by_name", {}).get(key, 0)
-        b2_count = batch2_metrics.get("avg_issues_by_name", {}).get(key, 0)
-        diff = b2_count - b1_count
-        secondary_diff[key] = {
-            "batch1": round(b1_count, 2),
-            "batch2": round(b2_count, 2),
-            "difference": round(diff, 2),
-            "trend": _get_trend(diff, "issues")
-        }
-
-    return {
-        "avg_issues_per_file": {
-            "batch1": round(batch1_metrics["avg_issues_per_file"], 2),
-            "batch2": round(batch2_metrics["avg_issues_per_file"], 2),
-            "difference": round(issues_diff, 2),
-            "trend": _get_trend(issues_diff, "issues")
-        },
-        "avg_score": {
-            "batch1": round(batch1_metrics["avg_score"], 2),
-            "batch2": round(batch2_metrics["avg_score"], 2),
-            "difference": round(score_diff, 2),
-            "trend": _get_trend(score_diff, "score")
-        },
-        "files_with_issues_percentage": {
-            "batch1": round(batch1_metrics["files_with_issues_percentage"], 1),
-            "batch2": round(batch2_metrics["files_with_issues_percentage"], 1),
-            "difference": round(
-                batch2_metrics["files_with_issues_percentage"] -
-                batch1_metrics["files_with_issues_percentage"], 1
-            )
-        },
-        "severity_distribution": {
-            "batch1": batch1_metrics["severity_counts"],
-            "batch2": batch2_metrics["severity_counts"]
-        },
-        "secondary_metric_comparison": secondary_diff
     }
 
 
@@ -171,67 +296,3 @@ def _calculate_weighted_score(metrics: dict, weights: dict) -> float:
         if category in metrics:
             weighted_score += metrics[category]["avg_score"] * weight
     return weighted_score
-
-
-def compare_analysis_batches(batch1_data: dict, batch2_data: dict) -> dict[str, any]:
-    """
-    对比两个批次的分析结果
-
-    Args:
-        batch1_data: get_analysis_full()返回的第一个批次数据
-        batch2_data: get_analysis_full()返回的第二个批次数据
-
-    Returns:
-        包含六类指标对比结果的字典
-    """
-    # 分析两个批次
-    batch1_analysis = _analyze_single_batch(batch1_data)
-    batch2_analysis = _analyze_single_batch(batch2_data)
-
-    # 对比每个指标
-    metrics_comparison = {}
-    for category in METRIC_CATEGORIES.keys():
-        if category in batch1_analysis["metrics"] and category in batch2_analysis["metrics"]:
-            category_name = METRIC_CATEGORIES[category]
-            metrics_comparison[category_name] = _calculate_metric_comparison(
-                batch1_analysis["metrics"][category],
-                batch2_analysis["metrics"][category]
-            )
-
-    # 计算加权总分
-    batch1_weight_config = batch1_data.get("weight_config", {})
-    batch2_weight_config = batch2_data.get("weight_config", {})
-
-    batch1_weighted = _calculate_weighted_score(
-        batch1_analysis["metrics"],
-        batch1_weight_config if batch1_weight_config else WEIGHTS
-    )
-    batch2_weighted = _calculate_weighted_score(
-        batch2_analysis["metrics"],
-        batch2_weight_config if batch2_weight_config else WEIGHTS
-    )
-
-    weighted_diff = batch2_weighted - batch1_weighted
-    overall_trend = "improved" if weighted_diff > 0 else "worsened" if weighted_diff < 0 else "unchanged"
-
-    return {
-        "batch_info": {
-            "batch1": {
-                "id": batch1_data["analysis_id"],
-                "file_count": batch1_analysis["file_count"],
-                "created_at": batch1_data["created_at"]
-            },
-            "batch2": {
-                "id": batch2_data["analysis_id"],
-                "file_count": batch2_analysis["file_count"],
-                "created_at": batch2_data["created_at"]
-            }
-        },
-        "metrics_comparison": metrics_comparison,
-        "overall_summary": {
-            "batch1_weighted_score": round(batch1_weighted, 2),
-            "batch2_weighted_score": round(batch2_weighted, 2),
-            "weighted_difference": round(weighted_diff, 2),
-            "trend": overall_trend
-        }
-    }

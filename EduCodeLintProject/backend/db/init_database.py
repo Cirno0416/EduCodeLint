@@ -36,7 +36,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             analysis_id TEXT,       -- 所属分析任务ID
             file_path TEXT,         -- 源文件路径
-            total_score REAL        -- 文件得分
+            total_score REAL,       -- 文件得分
+            file_hash TEXT          -- 文件哈希，用来检测文件是否变化
         );
     """)
 

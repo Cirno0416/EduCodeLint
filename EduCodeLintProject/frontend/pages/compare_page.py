@@ -1,12 +1,12 @@
 from datetime import datetime
-
 import pytz
-from PyQt6.QtCore import QThread
+
+from PyQt6.QtCore import QThread, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget,
-    QTableWidgetItem, QHeaderView, QMessageBox
+    QTableWidgetItem, QHeaderView, QListWidget, QListWidgetItem
 )
 
 from frontend.components.pagination import Pagination
@@ -23,7 +23,6 @@ class ComparePage(QWidget):
     def __init__(self, record_page: RecordPage, parent=None):
         super().__init__(parent)
 
-        # 监听历史记录删除事件，如果对比的记录被删除了，自动清除选择
         self.record_page = record_page
         self.record_page.record_deleted.connect(self.on_record_deleted)
 
@@ -32,17 +31,10 @@ class ComparePage(QWidget):
 
         self.page = 1
         self.page_size = 10
-
-        # 防重复请求
         self.loading_records = False
 
-        # 当前选择的ID
-        self.analysis_a = None
-        self.analysis_b = None
-
-        # 当前选择的按钮（用于高亮显示）
-        self.btn_a_selected = None
-        self.btn_b_selected = None
+        # 多选列表
+        self.selected_analyses = []
 
         self.compare_data = None
 
@@ -52,69 +44,110 @@ class ComparePage(QWidget):
         title.setObjectName("pageTitle")
         layout.addWidget(title)
 
-        # ===== 历史记录列表 =====
+        # =============================
+        # 表格
+        # =============================
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
-            ["ID", "文件数量", "创建时间", "状态", "选择批次A", "选择批次B"]
+            ["批次ID", "文件数量", "创建时间", "选择"]
         )
 
-        self.table.setEditTriggers(
-            QTableWidget.EditTrigger.NoEditTriggers
-        )
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
         layout.addWidget(self.table)
 
-        # ===== 分页控件 =====
+        # =============================
+        # 分页
+        # =============================
         self.pagination = Pagination(self.page, self.page_size)
         self.pagination.page_changed.connect(self.on_page_changed)
         self.pagination.page_size_changed.connect(self.on_page_size_changed)
 
         layout.addWidget(self.pagination)
 
-        # ===== 当前选择显示和Compare按钮 =====
-        btn_layout = QHBoxLayout()
+        # =============================
+        # 选中列表 + 按钮
+        # =============================
+        bottom_layout = QHBoxLayout()
 
-        self.selection_label = QLabel("A: 未选择    B: 未选择")
+        label_font = QFont()
+        label_font.setPointSize(12)
+        label_font.setBold(True)
+
+        # 列表展示选择批次ID
+        # 标题
+        self.selection_title = QLabel("已选择批次：")
+        self.selection_title.setFont(label_font)
+
+        # 列表
+        self.selection_list = QListWidget()
+        self.selection_list.setFixedHeight(250)     # 固定高度
+        self.selection_list.setMinimumWidth(500)    # 最小宽度
+        self.selection_list.setStyleSheet("""
+            QListWidget {
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 4px;
+            }
+        """)
+        self.selection_list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        selection_layout = QVBoxLayout()
+        selection_layout.addWidget(self.selection_title)
+        selection_layout.addWidget(self.selection_list)
+        selection_layout.addStretch()
+
+        # 按钮
+        btn_font = QFont()
+        btn_font.setPointSize(10)
+        btn_font.setBold(True)
 
         self.btn_compare = QPushButton("对比选中批次")
+        self.btn_compare.setFont(btn_font)
         self.btn_compare.clicked.connect(self.compare_selected)
 
-        btn_layout.addWidget(self.selection_label)
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.btn_compare)
-
-        layout.addLayout(btn_layout)
-
-        # 这里是空隙
-        layout.addSpacing(30)
-
-        # ===== 对比摘要 =====
-        summary_title = QLabel("对比结果")
-        font = QFont()
-        font.setBold(True)
-        summary_title.setFont(font)
-        layout.addWidget(summary_title)
-
-        self.summary_label = QLabel("还未进行对比")
-        layout.addWidget(self.summary_label)
-
-        # ===== 详细报告按钮 =====
         self.btn_report = QPushButton("查看对比分析报告")
+        self.btn_report.setFont(btn_font)
         self.btn_report.setEnabled(False)
         self.btn_report.clicked.connect(self.open_report)
 
-        layout.addWidget(self.btn_report)
+        # 分析状态
+        self.status_label = QLabel("尚未进行对比")
+        self.status_label.setFont(label_font)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
-        # 初始化加载
+        status_layout = QHBoxLayout()
+        status_layout.addStretch()
+        status_layout.addWidget(self.status_label)
+
+
+        btn_layout = QVBoxLayout()
+        btn_layout.addWidget(self.btn_compare)
+        btn_layout.addSpacing(20)
+        btn_layout.addWidget(self.btn_report)
+        btn_layout.addSpacing(30)
+        btn_layout.addLayout(status_layout)
+
+        bottom_layout.addLayout(selection_layout)
+        bottom_layout.addStretch()
+        bottom_layout.addLayout(btn_layout)
+
+        layout.addSpacing(30)
+        layout.addLayout(bottom_layout)
+
         self.load_records()
 
+    # =============================
+    # 加载数据
+    # =============================
     def load_records(self):
         if self.loading_records:
             return
@@ -122,7 +155,6 @@ class ComparePage(QWidget):
         self.loading_records = True
 
         self.record_thread = QThread()
-
         self.worker = RecordWorker(
             self.record_controller,
             self.page,
@@ -148,7 +180,7 @@ class ComparePage(QWidget):
 
     def on_records_loaded(self, result):
         if result.get("code") != 0:
-            QMessageBox.warning(self, "错误", result.get("msg"))
+            DialogUtil.warning(self, result.get("msg"))
             return
 
         data = result["data"]
@@ -158,10 +190,7 @@ class ComparePage(QWidget):
         self.page_size = data["page_size"]
         self.total_records = data.get("total", 0)
 
-        if self.total_records > 0:
-            self.total_pages = (self.total_records + self.page_size - 1) // self.page_size
-        else:
-            self.total_pages = 1
+        self.total_pages = max(1, (self.total_records + self.page_size - 1) // self.page_size)
 
         self.table.setRowCount(len(records))
 
@@ -172,30 +201,20 @@ class ComparePage(QWidget):
             self.table.setItem(row, 0, QTableWidgetItem(r["id"]))
             self.table.setItem(row, 1, QTableWidgetItem(str(r["file_count"])))
             self.table.setItem(row, 2, QTableWidgetItem(formatted_time))
-            self.table.setItem(row, 3, QTableWidgetItem(r["status"]))
 
-            btn_a = QPushButton("A")
-            btn_b = QPushButton("B")
+            btn = QPushButton("选择")
 
-            btn_a.clicked.connect(
-                lambda _, aid=r["id"]: self.select_a(aid)
+            btn.clicked.connect(
+                lambda _, aid=analysis_id, ct=formatted_time, fc=str(r["file_count"]):
+                self.toggle_select(aid, ct, fc)
             )
 
-            btn_b.clicked.connect(
-                lambda _, aid=r["id"]: self.select_b(aid)
-            )
+            # 已选高亮
+            if any(a["id"] == analysis_id for a in self.selected_analyses):
+                btn.setText("✓")
+                btn.setStyleSheet("background:#4CAF50;color:white")
 
-            # 如果已经是选中的A/B就高亮
-            if analysis_id == self.analysis_a:
-                btn_a.setText("✓")
-                btn_a.setStyleSheet("background:#4CAF50;color:white")
-
-            if analysis_id == self.analysis_b:
-                btn_b.setText("✓")
-                btn_b.setStyleSheet("background:#4CAF50;color:white")
-
-            self.table.setCellWidget(row, 4, btn_a)
-            self.table.setCellWidget(row, 5, btn_b)
+            self.table.setCellWidget(row, 3, btn)
 
         self.pagination.update_pagination(
             self.page,
@@ -206,6 +225,88 @@ class ComparePage(QWidget):
     def on_load_finished(self):
         self.loading_records = False
 
+    def toggle_select(self, analysis_id, created_at, file_count):
+        existing = next((a for a in self.selected_analyses if a["id"] == analysis_id), None)
+
+        if existing:
+            self.selected_analyses.remove(existing)
+        else:
+            self.selected_analyses.append({
+                "id": analysis_id,
+                "created_at": created_at,
+                "file_count": file_count
+            })
+
+        self.update_current_page_buttons()
+        self.update_selection_label()
+
+    def update_current_page_buttons(self):
+        for row in range(self.table.rowCount()):
+            analysis_id = self.table.item(row, 0).text()
+            btn = self.table.cellWidget(row, 3)
+
+            if any(a["id"] == analysis_id for a in self.selected_analyses):
+                btn.setText("✓")
+                btn.setStyleSheet("background:#4CAF50;color:white")
+            else:
+                btn.setText("选择")
+                btn.setStyleSheet("")
+
+    def update_selection_label(self):
+        self.selection_list.clear()
+
+        if not self.selected_analyses:
+            item = QListWidgetItem("无")
+            self.selection_list.addItem(item)
+            return
+
+        for a in self.selected_analyses:
+            text = f'{a["id"]}  {a["created_at"]} ({a["file_count"]}个文件)'
+            item = QListWidgetItem(text)
+            self.selection_list.addItem(item)
+
+    # =============================
+    # 删除同步
+    # =============================
+    def on_record_deleted(self, deleted_id):
+        self.selected_analyses = [
+            a for a in self.selected_analyses if a["id"] != deleted_id
+        ]
+        self.update_selection_label()
+
+    # =============================
+    # 对比
+    # =============================
+    def compare_selected(self):
+        if len(self.selected_analyses) < 2:
+            DialogUtil.warning(self, "至少选择两个批次")
+            return
+
+        if len(self.selected_analyses) > 5:
+            DialogUtil.warning(self, "最多选择5个批次")
+            return
+
+        ids = [a["id"] for a in self.selected_analyses]
+
+        result = self.compare_controller.compare(ids)
+
+        if result["code"] != 0:
+            DialogUtil.warning(self, result["msg"])
+            return
+
+        self.compare_data = result["data"]
+
+        self.btn_report.setEnabled(True)
+
+        self.status_label.setText("对比分析完成")
+
+    def open_report(self):
+        dialog = CompareReportWindow(self.compare_data)
+        dialog.exec()
+
+    # =============================
+    # 分页
+    # =============================
     def on_page_changed(self, page):
         self.page = page
         self.load_records()
@@ -216,119 +317,16 @@ class ComparePage(QWidget):
             self.page = 1
             self.load_records()
 
-    def select_a(self, analysis_id):
-        if self.analysis_b == analysis_id:
-            DialogUtil.warning(self, "A 和 B 不能重复")
-            return
-
-        self.analysis_a = analysis_id
-
-        self.update_current_page_buttons()
-        self.update_selection_label()
-
-    def select_b(self, analysis_id):
-        if self.analysis_a == analysis_id:
-            DialogUtil.warning(self, "A 和 B 不能重复")
-            return
-
-        self.analysis_b = analysis_id
-
-        self.update_current_page_buttons()
-        self.update_selection_label()
-
-    def update_current_page_buttons(self):
-        for row in range(self.table.rowCount()):
-            analysis_id = self.table.item(row, 0).text()
-
-            btn_a = self.table.cellWidget(row, 4)
-            btn_b = self.table.cellWidget(row, 5)
-
-            # A
-            if analysis_id == self.analysis_a:
-                btn_a.setText("✓")
-                btn_a.setStyleSheet("background:#4CAF50;color:white")
-            else:
-                btn_a.setText("A")
-                btn_a.setStyleSheet("")
-
-            # B
-            if analysis_id == self.analysis_b:
-                btn_b.setText("✓")
-                btn_b.setStyleSheet("background:#4CAF50;color:white")
-            else:
-                btn_b.setText("B")
-                btn_b.setStyleSheet("")
-
-    def update_selection_label(self):
-        a_text = self.analysis_a if self.analysis_a else "未选择"
-        b_text = self.analysis_b if self.analysis_b else "未选择"
-
-        self.selection_label.setText(
-            f"Batch A: {a_text}    |    Batch B: {b_text}"
-        )
-
-    def on_record_deleted(self, deleted_id):
-        changed = False
-
-        if self.analysis_a == deleted_id:
-            self.analysis_a = None
-            changed = True
-
-        if self.analysis_b == deleted_id:
-            self.analysis_b = None
-            changed = True
-
-        if changed:
-            self.update_selection_label()
-
-    def compare_selected(self):
-        if not self.analysis_a or not self.analysis_b:
-            DialogUtil.warning(self, "请选择两条记录进行对比")
-            return
-
-        result = self.compare_controller.compare(self.analysis_a, self.analysis_b)
-
-        if result["code"] != 0:
-            DialogUtil.warning(self, result["msg"])
-            return
-
-        self.compare_data = result["data"]
-
-        summary = self.compare_data["overall_summary"]
-        text = (
-            f"Batch Score: {summary['batch1_weighted_score']} → {summary['batch2_weighted_score']}\n"
-            f"Weighted Difference: {summary['weighted_difference']}\n"
-            f"Trend: {summary['trend']}"
-        )
-        self.summary_label.setText(text)
-        self.btn_report.setEnabled(True)
-
-    def open_report(self):
-        dialog = CompareReportWindow(self.compare_data)
-        dialog.exec()
-
     def on_error(self, message):
         DialogUtil.error(self, f"获取记录失败: {message}")
 
     def time_format(self, created_at):
-        """将ISO格式的时间戳转换为本地时间并格式化显示"""
         local_tz = pytz.timezone('Asia/Shanghai')
 
         try:
-            # 解析ISO格式的时间戳
             dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-
-            # 如果时间是UTC，转换为本地时间
-            if dt.tzinfo is not None:
-                # 转换为本地时间
-                local_dt = dt.astimezone(local_tz)
-                # 格式化
-                formatted_time = local_dt.strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                # 如果没有时区信息，直接使用
-                formatted_time = dt.strftime('%Y-%m-%d %H:%M:%S')
+            if dt.tzinfo:
+                dt = dt.astimezone(local_tz)
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
         except:
-            # 解析失败时使用原始字符串
-            formatted_time = created_at
-
-        return formatted_time
+            return created_at

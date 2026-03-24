@@ -1,7 +1,7 @@
 class SeverityLevel:
-    LOW = "Low"
-    MEDIUM = "Medium"
-    HIGH = "High"
+    LOW = "低"
+    MEDIUM = "中"
+    HIGH = "高"
 
     COEFFICIENTS = {
         LOW: 1.0,

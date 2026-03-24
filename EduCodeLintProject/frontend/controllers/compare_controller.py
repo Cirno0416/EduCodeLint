@@ -5,5 +5,5 @@ class CompareController:
     def __init__(self):
         self.api = ApiClient()
 
-    def compare(self, analysis_id_1, analysis_id_2):
-        return self.api.compare(analysis_id_1, analysis_id_2)
+    def compare(self, analysis_ids: list):
+        return self.api.compare(analysis_ids)

@@ -76,6 +76,7 @@ def get_analysis_detail(analysis_id: str) -> dict:
 
             results.append({
                 "file_path": file.file_path,
+                "file_hash": file.file_hash,
                 "status": "success",
                 "score": file.total_score,
                 "summaries": summaries

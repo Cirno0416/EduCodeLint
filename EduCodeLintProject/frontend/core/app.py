@@ -4,13 +4,15 @@ from frontend.components.loading_overlay import LoadingOverlay
 from frontend.components.sidebar import Sidebar
 from frontend.pages.analyze_page import AnalyzePage
 from frontend.pages.compare_page import ComparePage
+from frontend.pages.home_page import HomePage
 from frontend.pages.record_page import RecordPage
 
 
 class MainWindow(QMainWindow):
-    PAGE_ANALYZE = 0
-    PAGE_COMPARE = 1
-    PAGE_RECORD = 2
+    PAGE_HOME = 0
+    PAGE_ANALYZE = 1
+    PAGE_COMPARE = 2
+    PAGE_RECORD = 3
 
     def __init__(self):
         super().__init__()
@@ -21,12 +23,14 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout()
 
         self.sidebar = Sidebar()
+        self.home_page = HomePage()
         self.analyze_page = AnalyzePage()
         self.record_page = RecordPage()
         self.compare_page = ComparePage(record_page=self.record_page)
 
         # 页面容器
         self.stack = QStackedWidget()
+        self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.analyze_page)
         self.stack.addWidget(self.compare_page)
         self.stack.addWidget(self.record_page)
@@ -40,6 +44,9 @@ class MainWindow(QMainWindow):
         )
         self.sidebar.btn_record.clicked.connect(
             lambda: self.show_page(self.PAGE_RECORD)
+        )
+        self.sidebar.btn_home.clicked.connect(
+            lambda: self.show_page(self.PAGE_HOME)
         )
 
         layout.addWidget(self.sidebar)

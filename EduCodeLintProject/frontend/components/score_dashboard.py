@@ -50,9 +50,9 @@ class ScoreDashboard(QWidget):
         # ===== 文件列表表格 =====
         self.file_table = QTableWidget()
         self.file_table.setObjectName("fileTable")
-        self.file_table.setColumnCount(4)
+        self.file_table.setColumnCount(3)
         self.file_table.setHorizontalHeaderLabels(
-            ["文件路径", "得分", "状态", "操作"]
+            ["文件路径", "得分", "操作"]
         )
         self.file_table.setSortingEnabled(True)
 
@@ -73,8 +73,6 @@ class ScoreDashboard(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         # 得分列自适应内容宽度
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        # 状态列自适应内容宽度
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         # 操作列固定宽度
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
 
@@ -99,20 +97,16 @@ class ScoreDashboard(QWidget):
                 row, 0, QTableWidgetItem(f.get("file_path", ""))
             )
             # 得分
-            self.file_table.setItem(
-                row, 1, QTableWidgetItem(str(f.get("score", "--")))
-            )
-            # 状态
-            self.file_table.setItem(
-                row, 2, QTableWidgetItem(f.get("status", ""))
-            )
+            score_value = f.get("score", "--")
+            display_score = f"{score_value:.2f}" if isinstance(score_value, (int, float)) else str(score_value)
+            self.file_table.setItem(row, 1, QTableWidgetItem(display_score))
 
             # ===== 操作按钮 =====
             btn = QPushButton("查看分析报告")
             btn.clicked.connect(
                 lambda _, file_data=f: self.open_report(file_data)
             )
-            self.file_table.setCellWidget(row, 3, btn)
+            self.file_table.setCellWidget(row, 2, btn)
 
         if data.get("status") == "success":
             self.btn_statistics.setEnabled(True)

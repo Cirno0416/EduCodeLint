@@ -1,15 +1,18 @@
-from PyQt6.QtCore import QThread
+from PyQt6.QtCore import QThread, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QFileDialog, QListWidget, QHBoxLayout, QFrame, QListWidgetItem
+    QFileDialog, QListWidget, QHBoxLayout, QFrame, QListWidgetItem, QGridLayout, QMessageBox
 )
 
+from backend.constant.metric_category import MetricCategory
 from frontend.components.selected_file_item import SelectedFileItem
 from frontend.core.analyze_worker import AnalyzeWorker
 from frontend.components.exclude_tool_selector import ExcludeToolSelector
 from frontend.components.score_dashboard import ScoreDashboard
 from frontend.controllers.analyze_controller import AnalyzeController
+from frontend.core.reset_weights_worker import ResetWeightsWorker
+from frontend.core.weights_worker import WeightsWorker
 from frontend.utils.dialog_util import DialogUtil
 
 
@@ -34,13 +37,6 @@ class AnalyzePage(QWidget):
         divider.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(divider)
 
-        # ==============================
-        # 文件选择区域
-        # ==============================
-        file_section = QVBoxLayout()
-
-        header_layout = QHBoxLayout()
-
         btn_font = QFont()
         btn_font.setPointSize(10)
         btn_font.setBold(True)
@@ -49,13 +45,21 @@ class AnalyzePage(QWidget):
         label_font.setPointSize(12)
         label_font.setBold(True)
 
+        top_section_layout = QHBoxLayout()
+
+        # 左侧：文件选择区域（占70%宽度）
+        file_section = QVBoxLayout()
+        file_section.setObjectName("fileSection")
+
+        file_header_layout = QHBoxLayout()
+
         # 标题
         label = QLabel("已选择文件")
         label.setFont(label_font)
-        header_layout.addWidget(label)
+        file_header_layout.addWidget(label)
 
         # 占位，把按钮推到右侧
-        header_layout.addStretch()
+        file_header_layout.addStretch()
 
         # 选择文件按钮
         self.btn_select = QPushButton("选择文件")
@@ -63,9 +67,9 @@ class AnalyzePage(QWidget):
         self.btn_select.setFixedHeight(30)
         self.btn_select.clicked.connect(self.select_files)
         self.btn_select.setFont(btn_font)
-        header_layout.addWidget(self.btn_select)
+        file_header_layout.addWidget(self.btn_select)
 
-        file_section.addLayout(header_layout)
+        file_section.addLayout(file_header_layout)
 
         # 文件列表
         self.file_list = QListWidget()
@@ -78,7 +82,81 @@ class AnalyzePage(QWidget):
         """)
         file_section.addWidget(self.file_list)
 
-        layout.addLayout(file_section)
+        # 右侧：权重展示区域（占30%宽度）
+        weight_section = QVBoxLayout()
+
+        weights_header_layout = QHBoxLayout()
+
+        # 标题
+        label = QLabel("当前权重配置")
+        label.setFont(label_font)
+        weights_header_layout.addWidget(label)
+
+        # 占位，把按钮推到右侧
+        weights_header_layout.addStretch()
+
+        # 重置权重按钮
+        self.btn_reset_weights = QPushButton("重置权重")
+        self.btn_reset_weights.setFixedWidth(80)
+        self.btn_reset_weights.setFixedHeight(30)
+        self.btn_reset_weights.clicked.connect(self.reset_weights)
+        self.btn_reset_weights.setFont(btn_font)
+        weights_header_layout.addWidget(self.btn_reset_weights)
+
+        weight_section.addLayout(weights_header_layout)
+
+        # 添加分隔线
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFrameShadow(QFrame.Shadow.Sunken)
+        weight_section.addWidget(divider)
+
+        # 创建权重列表容器
+        weights_container = QWidget()
+        weights_layout = QGridLayout(weights_container)
+        weights_layout.setVerticalSpacing(10)
+        weights_layout.setHorizontalSpacing(20)
+
+        # 创建权重标签字典
+        self.weight_labels = {}
+
+        # 定义初始指标列表
+        indicators = [
+            MetricCategory.CODE_STYLE,
+            MetricCategory.CODE_SMELL,
+            MetricCategory.COMPLEXITY,
+            MetricCategory.POTENTIAL_ERROR,
+            MetricCategory.SECURITY_VULNERABILITY
+        ]
+
+        # 创建权重显示行
+        for i, indicator in enumerate(indicators):
+            # 指标名称
+            name_label = QLabel(indicator)
+            name_label.setFont(btn_font)
+            weights_layout.addWidget(name_label, i, 0)
+
+            # 权重值（初始显示0%）
+            weight_label = QLabel("0.00%")
+            weight_label.setFont(btn_font)
+            weight_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+            weights_layout.addWidget(weight_label, i, 1)
+
+            # 存储到字典中
+            self.weight_labels[indicator] = weight_label
+
+        # 将权重容器添加到weight_section
+        weight_section.addWidget(weights_container)
+
+        # 添加弹性空间，使内容靠上对齐
+        weight_section.addStretch()
+
+        top_section_layout.addLayout(file_section, 8)
+        top_section_layout.addSpacing(20)
+        top_section_layout.addLayout(weight_section, 2)
+
+        # 将整个水平布局添加到主布局
+        layout.addLayout(top_section_layout)
 
         # ==============================
         # 底部区域
@@ -112,6 +190,79 @@ class AnalyzePage(QWidget):
         layout.addWidget(self.dashboard)
 
         self.setLayout(layout)
+
+        # 初始加载权重
+        self.get_weights()
+
+    def get_weights(self):
+        self.weight_thread = QThread()
+        self.worker = WeightsWorker(self.controller)
+        self.worker.moveToThread(self.weight_thread)
+
+        self.weight_thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.on_get_weights_finished)
+        self.worker.error.connect(self.on_error)
+
+        # 清理线程
+        self.worker.finished.connect(self.weight_thread.quit)
+        self.worker.error.connect(self.weight_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.weight_thread.finished.connect(self.weight_thread.deleteLater)
+
+        self.weight_thread.start()
+
+    def on_get_weights_finished(self, result):
+        if result.get("code") != 0:
+            DialogUtil.error(self, result.get("msg", "未知错误"))
+            return
+
+        weights_data = result.get("data", {})
+
+        for indicator, weight_value in weights_data.items():
+            if indicator in self.weight_labels:
+                percentage = weight_value * 100
+                self.weight_labels[indicator].setText(f"{percentage:.2f}%")
+
+    def reset_weights(self):
+        """重置权重为默认配置"""
+        # 禁用重置按钮，防止重复点击
+        self.btn_reset_weights.setEnabled(False)
+
+        reset = DialogUtil.question(self, "确定要重置权重为默认值吗？", "重置权重确认")
+        if not reset:
+            return
+
+        # 创建并启动重置线程
+        self.reset_thread = QThread()
+        self.reset_worker = ResetWeightsWorker(self.controller)
+        self.reset_worker.moveToThread(self.reset_thread)
+
+        self.reset_thread.started.connect(self.reset_worker.run)
+        self.reset_worker.finished.connect(self.on_reset_weights_finished)
+        self.reset_worker.error.connect(self.on_error)
+
+        # 清理线程
+        self.reset_worker.finished.connect(self.reset_thread.quit)
+        self.reset_worker.error.connect(self.reset_thread.quit)
+        self.reset_worker.finished.connect(self.reset_worker.deleteLater)
+        self.reset_thread.finished.connect(self.reset_thread.deleteLater)
+
+        self.reset_thread.start()
+
+    def on_reset_weights_finished(self, result):
+        if result.get("code") != 0:
+            DialogUtil.error(self, result.get("msg", "重置权重失败"))
+            self.btn_reset_weights.setEnabled(True)
+            return
+
+        # 重置成功后，重新获取最新的权重配置
+        DialogUtil.info(self, "权重已重置为默认值")
+
+        # 重新获取权重更新界面
+        self.get_weights()
+
+        # 恢复按钮
+        self.btn_reset_weights.setEnabled(True)
 
     def run_analysis(self):
         if not self.selected_files:
@@ -160,6 +311,7 @@ class AnalyzePage(QWidget):
             return
 
         self.dashboard.update_score(result["data"])
+        self.get_weights()
 
     def on_analysis_error(self, message):
         main_window = self.window()
@@ -192,3 +344,6 @@ class AnalyzePage(QWidget):
         if filename in self.selected_files:
             self.selected_files.remove(filename)
         self.refresh_file_list()
+
+    def on_error(self, message):
+        DialogUtil.error(self, f"获取记录失败: {message}")

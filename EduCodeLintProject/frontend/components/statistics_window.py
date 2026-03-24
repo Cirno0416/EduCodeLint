@@ -319,9 +319,8 @@ def create_docstring_tab(files):
     canvas = FigureCanvas(figure)
     canvas.setFixedSize(650, 500)
 
-    STANDARD_DOCSTRING = "standard_docstring"
     metric_count = {
-        STANDARD_DOCSTRING: 0,
+        MetricName.STANDARD_DOCSTRING: 0,
         MetricName.NONSTANDARD_DOCSTRING: 0,
         MetricName.MISSING_MODULE_DOCSTRING: 0,
     }
@@ -339,7 +338,7 @@ def create_docstring_tab(files):
                 break  # 每个文件同一指标只计数一次
 
         if not found:
-            metric_count[STANDARD_DOCSTRING] = metric_count[STANDARD_DOCSTRING] + 1
+            metric_count[MetricName.STANDARD_DOCSTRING] = metric_count[MetricName.STANDARD_DOCSTRING] + 1
 
     ax = figure.add_subplot(211)
 

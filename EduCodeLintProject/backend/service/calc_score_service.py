@@ -4,15 +4,14 @@ from collections import defaultdict
 from backend.constant.metric_category import MetricCategory
 from backend.constant.metric_name import MetricName
 from backend.constant.severity_level import SeverityLevel
-from backend.constant.weights import WEIGHTS
 from backend.entity.dto.issue_dto import IssueDTO
 from backend.entity.dto.metric_summary_dto import MetricSummaryDTO
 
 
-def calc_file_score(summaries: list[MetricSummaryDTO]) -> float:
+def calc_file_score(summaries: list[MetricSummaryDTO], weights) -> float:
     s_base = 0.0
     r = 1.0
-    category_scores = {category: 100.0 for category in WEIGHTS.keys()}
+    category_scores = {category: 100.0 for category in weights.keys()}
 
     for summary in summaries:
         if summary.metric_category in category_scores:
@@ -20,7 +19,7 @@ def calc_file_score(summaries: list[MetricSummaryDTO]) -> float:
         elif summary.metric_category == MetricCategory.DOCSTRING:
             r = summary.score
 
-    for category, weight in WEIGHTS.items():
+    for category, weight in weights.items():
         s_metric = category_scores[category]
         s_base += weight * s_metric
 

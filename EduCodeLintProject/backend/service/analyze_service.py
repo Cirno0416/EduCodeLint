@@ -1,3 +1,4 @@
+import hashlib
 import os
 import threading
 import uuid
@@ -114,10 +115,13 @@ def _analyze_one_file(
 
         summaries = build_metric_summaries(issues)
 
+        weights, _ = get_latest_weights_and_Ek()
+
         file = FileDTO(
             analysis_id=analysis_id,
             file_path=path,
-            total_score=calc_file_score(summaries),
+            total_score=calc_file_score(summaries, weights),
+            file_hash=calculate_file_hash(path)
         )
 
         # 由 writer 顺序写
@@ -128,6 +132,7 @@ def _analyze_one_file(
 
         return {
             "file_path": path,
+            "file_hash": file.file_hash,
             "score": file.total_score,
             "status": "success",
             "summaries": summaries
@@ -147,3 +152,8 @@ def _analyze_one_file(
 
 def _generate_analysis_id() -> str:
     return str(uuid.uuid4())
+
+
+def calculate_file_hash(file_path):
+    with open(file_path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()

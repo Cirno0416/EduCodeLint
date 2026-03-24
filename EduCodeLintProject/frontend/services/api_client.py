@@ -16,6 +16,12 @@ class ApiClient:
             json={"paths": paths, "exclude_tools": exclude_tools}
         ).json()
 
+    def get_weights(self):
+        return requests.get(f"{BASE_URL}/analyze/weights").json()
+
+    def reset_weights(self):
+        return requests.post(f"{BASE_URL}/analyze/weights/reset").json()
+
     def get_records(self, page, page_size):
         return requests.get(
             f"{BASE_URL}/records",
@@ -41,11 +47,10 @@ class ApiClient:
             }
         ).json()
 
-    def compare(self, analysis_id_1, analysis_id_2):
+    def compare(self, analysis_ids):
         return requests.post(
             f"{BASE_URL}/compare",
             json={
-                "analysis_id_1": analysis_id_1,
-                "analysis_id_2": analysis_id_2
+                "analysis_ids": analysis_ids
             }
         ).json()

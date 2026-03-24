@@ -1,5 +1,8 @@
 from flask import Blueprint, request
 
+from backend.constant.weights import DEFAULT_WEIGHTS
+from backend.db.dao.weight_dao import get_latest_weights_and_Ek, insert_adaptive_weights
+from backend.db.init_database import get_connection
 from backend.entity.result.result import success, error
 from backend.service.analyze_service import analyze_files
 
@@ -44,3 +47,21 @@ def analyze_multiple():
         return error(result["error"])
 
     return success(result)
+
+
+@analyze_bp.route('/analyze/weights', methods=['GET'])
+def get_weights():
+    weights, _ = get_latest_weights_and_Ek()
+
+    if not weights:
+        return error("获取权重失败")
+
+    return success(weights)
+
+
+@analyze_bp.route('/analyze/weights/reset', methods=['POST'])
+def reset_weights():
+    with get_connection() as conn:
+        insert_adaptive_weights("默认权重", DEFAULT_WEIGHTS, {}, conn)
+
+        return success()

@@ -48,9 +48,9 @@ class RecordPage(QWidget):
         # 历史记录表格
         # ==============================
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
+        self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
-            ["ID", "文件数量", "创建时间", "状态", "操作"]
+            ["批次ID", "文件数量", "创建时间", "操作"]
         )
 
         # 禁止编辑
@@ -87,7 +87,6 @@ class RecordPage(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
 
         font = QFont()
         font.setBold(True)
@@ -176,13 +175,12 @@ class RecordPage(QWidget):
             self.table.setItem(row, 0, QTableWidgetItem(r["id"]))
             self.table.setItem(row, 1, QTableWidgetItem(str(r["file_count"])))
             self.table.setItem(row, 2, QTableWidgetItem(formatted_time))
-            self.table.setItem(row, 3, QTableWidgetItem(r["status"]))
 
             btn_delete = QPushButton("删除")
             btn_delete.clicked.connect(
                 partial(self.delete_record, r["id"])
             )
-            self.table.setCellWidget(row, 4, btn_delete)
+            self.table.setCellWidget(row, 3, btn_delete)
 
         self.pagination.update_pagination(
             self.page,
@@ -285,13 +283,8 @@ class RecordPage(QWidget):
         self.loading_detail = False
 
     def delete_record(self, analysis_id):
-        reply = QMessageBox.question(
-            self,
-            "删除确认",
-            f"确定要删除记录 {analysis_id} 吗？",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        if reply == QMessageBox.StandardButton.No:
+        delete = DialogUtil.question(self, f"确定要删除记录 {analysis_id} 吗？", "删除确认")
+        if not delete:
             return
 
         # 记录删除的id，用于回调

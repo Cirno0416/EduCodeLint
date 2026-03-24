@@ -1,27 +1,27 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 
 from backend.db.dao.analysis_dao import get_analysis_detail
 from backend.entity.result.result import error, success
-from backend.service.compare_service import compare_analysis_batches
+from backend.service.compare_service import compare_multiple_batches
 
 compare_bp = Blueprint('compare', __name__)
 
 
 @compare_bp.route('/compare', methods=['POST'])
-def compare():
+def compare_multiple():
     data = request.get_json()
-    analysis_id_1 = data.get("analysis_id_1")
-    analysis_id_2 = data.get("analysis_id_2")
+    analysis_ids = data.get("analysis_ids", [])
 
-    if not analysis_id_1 or not analysis_id_2:
-        return error("Both analysis IDs are required")
+    if not analysis_ids or len(analysis_ids) < 2:
+        return error("At least two analysis IDs are required")
 
-    analysis_1 = get_analysis_detail(analysis_id_1)
-    analysis_2 = get_analysis_detail(analysis_id_2)
+    analyses = []
+    for aid in analysis_ids:
+        analysis = get_analysis_detail(aid)
+        if not analysis:
+            return error(f"Invalid analysis_id: {aid}")
+        analyses.append(analysis)
 
-    if not analysis_1 or not analysis_2:
-        return error("One or both analysis IDs are invalid")
+    result = compare_multiple_batches(analyses)
 
-    comparison_result = compare_analysis_batches(analysis_1, analysis_2)
-
-    return success(comparison_result)
+    return success(result)

@@ -9,3 +9,10 @@ class AnalyzeController:
         if len(files) == 1:
             return self.api.analyze_single(files[0], exclude_tools)
         return self.api.analyze_multiple(files, exclude_tools)
+
+    def get_weights(self):
+        return self.api.get_weights()
+
+    def reset_weights(self):
+        return self.api.reset_weights()
+    

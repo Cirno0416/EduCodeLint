@@ -6,6 +6,7 @@ from backend.constant.metric_category import MetricCategory
 from backend.constant.tool_name import ToolName
 from backend.constant.metric_name import MetricName
 from backend.constant.severity_level import SeverityLevel
+from backend.utils.description_enhancer import DescriptionEnhancer
 
 
 def parse_issues_to_dtos(raw: dict[str, any], exclude_tools: list = None) -> list[IssueDTO]:
@@ -36,7 +37,8 @@ def _parse_bandit(results: dict[str, any]) -> list[IssueDTO]:
     for item in results.get(ToolName.BANDIT, []):
         rule_id = item.get("test_id")
         metric_name = _get_metric_name_bandit(rule_id)
-        sererity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
+        severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
+        message = DescriptionEnhancer.enhance(ToolName.BANDIT, item.get("issue_text"))
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -45,8 +47,8 @@ def _parse_bandit(results: dict[str, any]) -> list[IssueDTO]:
             metric_name=metric_name,
             rule_id=rule_id,
             line=item.get("line_number"),
-            severity=sererity,
-            message=item.get("issue_text")
+            severity=severity,
+            message=message
         ))
     return dtos
 
@@ -55,6 +57,7 @@ def _get_metric_name_bandit(rule_id: str) -> str:
     BANDIT_METRIC_NAME_MAPPING = {
         # 危险函数调用
         "B102": MetricName.DANGEROUS_FUNCTION_CALL,
+        "B307": MetricName.DANGEROUS_FUNCTION_CALL,
         # 捕获异常未处理
         "B110": MetricName.IGNORED_EXCEPTION,
         # 硬编码敏感信息
@@ -70,35 +73,21 @@ def _parse_flake8(results: dict[str, any]) -> list[IssueDTO]:
     for _, issues in results.get(ToolName.FLAKE8, {}).items():
         for item in issues:
             rule_id = item.get("code")
-            metric_category = _get_metric_category_flake8(rule_id)
             metric_name = _get_metric_name_flake8(rule_id)
             severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
+            message = DescriptionEnhancer.enhance(ToolName.FLAKE8, item.get("text"))
 
             dtos.append(IssueDTO(
                 metric_summary_id=-1,
                 tool=ToolName.FLAKE8,
-                metric_category=metric_category,
+                metric_category=MetricCategory.CODE_STYLE,
                 metric_name=metric_name,
                 rule_id=rule_id,
                 line=item.get("line_number"),
                 severity=severity,
-                message=item.get("text")
+                message=message
             ))
     return dtos
-
-
-def _get_metric_category_flake8(code_val: str) -> str:
-    if code_val.startswith("C"):
-        return MetricCategory.COMPLEXITY
-    elif code_val.startswith("D"):
-        return MetricCategory.DOCSTRING
-    elif code_val.startswith(("E", "W", "N")):
-        return MetricCategory.CODE_STYLE
-    elif code_val.startswith("F"):
-        return MetricCategory.POTENTIAL_ERROR
-    else:
-        logging.warning(f"Flake8 返回了未知规则: {code_val}")
-        return MetricCategory.UNKNOWN_METRIC_CATEGORY
 
 
 def _get_metric_name_flake8(rule_id: str) -> str:
@@ -123,9 +112,7 @@ def _get_metric_name_flake8(rule_id: str) -> str:
         # 类命名风格
         "N801": MetricName.CLASS_NAMING,
         # 参数名不是 snake_case
-        "N803": MetricName.VARIABLE_FUNCTION_NAMING,
-        # 常量名非全大写
-        "N812": MetricName.VARIABLE_FUNCTION_NAMING
+        "N803": MetricName.VARIABLE_FUNCTION_NAMING
     }
 
     return FLAKE8_METRIC_NAME_MAPPING.get(rule_id, MetricName.UNKNOWN_METRIC_NAME)
@@ -138,6 +125,7 @@ def _parse_pylint(results: dict[str, any]) -> list[IssueDTO]:
         metric_category = _get_metric_category_pylint(rule_id)
         metric_name = _get_metric_name_pylint(rule_id)
         severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
+        message = DescriptionEnhancer.enhance(ToolName.PYLINT, item.get("message"))
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -147,7 +135,7 @@ def _parse_pylint(results: dict[str, any]) -> list[IssueDTO]:
             rule_id=rule_id,
             line=item.get("line"),
             severity=severity,
-            message=item.get("message")
+            message=message
         ))
     return dtos
 
@@ -194,6 +182,7 @@ def _parse_pydocstyle(results: dict[str, any]) -> list[IssueDTO]:
         rule_id = item.get("code")
         metric_name = _get_metric_name_pydocstyle(rule_id)
         severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
+        message = DescriptionEnhancer.enhance(ToolName.PYDOCSTYLE, item.get("message"))
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -203,7 +192,7 @@ def _parse_pydocstyle(results: dict[str, any]) -> list[IssueDTO]:
             rule_id=rule_id,
             line=item.get("line"),
             severity=severity,
-            message=item.get("message")
+            message=message
         ))
     return dtos
 
@@ -240,6 +229,7 @@ def _parse_pyright(results: dict[str, any]) -> list[IssueDTO]:
         rule_id = item.get("rule")
         metric_name = _get_metric_name_pyright(rule_id)
         severity = METRIC_SEVERITY_MAP.get(metric_name, SeverityLevel.LOW)
+        message = DescriptionEnhancer.enhance(ToolName.PYRIGHT, item.get("message"))
 
         dtos.append(IssueDTO(
             metric_summary_id=-1,
@@ -249,7 +239,7 @@ def _parse_pyright(results: dict[str, any]) -> list[IssueDTO]:
             rule_id=rule_id,
             line=item.get("range", {}).get("start", {}).get("line"),
             severity=severity,
-            message=item.get("message")
+            message=message
         ))
     return dtos
 

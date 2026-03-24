@@ -187,16 +187,14 @@ def _collect_item_issues(item: dict, threshold: int) -> list:
 
     complexity = item.get("complexity", 0)
     if complexity > threshold:
-        object_type = item.get("type")
         name = item.get("name")
         line = item.get("lineno")
 
         issues.append({
-                "object_type": object_type,
                 "name": name,
                 "line": line,
                 "complexity": complexity,
-                "message": f"The cyclomatic complexity of {object_type} '{name}' is {complexity}",
+                "message": f"'{name}' 圈复杂度过高（当前 {complexity}， 阈值 {threshold}）。建议拆分或简化条件判断。",
             }
         )
 

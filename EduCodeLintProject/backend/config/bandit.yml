@@ -5,6 +5,7 @@ exclude_dirs:
   - __pycache__
 
 tests:
-  - B102  # 危险函数调用（exec/eval）
+  - B102  # 危险函数调用（exec）
+  - B307  # 危险函数调用（eval）
   - B110  # 捕获异常未处理（except Exception: / except: pass）
   - B105  # 硬编码敏感信息（密码、密钥）

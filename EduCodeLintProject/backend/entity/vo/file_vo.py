@@ -7,3 +7,4 @@ class FileVO:
     analysis_id: str
     file_path: str
     total_score: float
+    file_hash: str
