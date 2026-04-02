@@ -74,10 +74,12 @@ class CompareReportWindow(QDialog):
             scroll_layout.addWidget(label)
 
             desc_font = QFont()
-            desc_font.setPointSize(10)
-            desc = QLabel("共性问题强度 = 出现频率 × 严重程度 ÷ 波动程度 \n"
-                          "值越高，说明该问题在多个批次中普遍存在、数量多且稳定，是最值得优先优化的问题。\n"
-                          "只取至少在50%的批次中出现的指标。")
+            desc_font.setPointSize(12)
+            desc = QLabel("共性问题强度 = 出现频率 × 问题密度 ÷ 波动程度\n"
+                          "• 强度越高，问题越值得优先优化。只选取前十，且至少出现在 50% 批次中的问题\n"
+                          "• 出现频率：问题出现的文件数占总文件数的比例，频率越高影响范围越广\n"
+                          "• 问题密度：平均每文件的问题数量，密度越高对代码质量影响越大\n"
+                          "• 波动程度：问题在不同批次之间的出现频率波动，波动越大越不稳定\n")
             desc.setFont(desc_font)
 
             scroll_layout.addWidget(desc)
@@ -90,7 +92,7 @@ class CompareReportWindow(QDialog):
     def create_batch_label(self):
         text = ""
         for i, batch in enumerate(self.batches):
-            text += f"批次{i+1}: {self.time_format(batch['created_at'])} ({batch['file_count']}个文件)  {batch['id']}\n"
+            text += f"批次{i + 1}: {self.time_format(batch['created_at'])} ({batch['file_count']}个文件)  {batch['id']}\n"
         batch_label = QLabel(text)
         batch_label.setStyleSheet("""
             font-family: Consolas, Courier, monospace;
@@ -189,7 +191,7 @@ class CompareReportWindow(QDialog):
             scores = [self.normalize_score(batch["metrics"][c]["avg_score"]) for c in categories]
             scores += scores[:1]
             angle_loop = np.append(angles, angles[0])
-            ax.plot(angle_loop, scores, label=f"批次{i+1}", linewidth=2, color=color_list[i % len(color_list)])
+            ax.plot(angle_loop, scores, label=f"批次{i + 1}", linewidth=2, color=color_list[i % len(color_list)])
             ax.fill(angle_loop, scores, alpha=0.2, color=color_list[i % len(color_list)])
 
         ax.set_thetagrids(angles * 180 / np.pi, categories)
@@ -266,9 +268,12 @@ class CompareReportWindow(QDialog):
         ax.axvline(0, linestyle="--", linewidth=1)
         ax.grid(axis="x", linestyle="--", alpha=0.6)
 
+        # 留白，防止标签被裁剪
         ax.margins(x=0.15)
 
         ax.invert_yaxis()
+
+        fig.subplots_adjust(left=0.25)
 
         return self.create_canvas(fig)
 
@@ -311,7 +316,6 @@ class CompareReportWindow(QDialog):
 
     # ===== 画布封装 =====
     def create_canvas(self, fig):
-        fig.tight_layout()
         fig.patch.set_facecolor("#f4f6f8")
         for ax in fig.axes:
             ax.set_facecolor("#f4f6f8")

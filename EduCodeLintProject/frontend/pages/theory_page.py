@@ -103,13 +103,6 @@ class TheoryPage(QWidget):
         weight_box.layout().addWidget(weight_table)
         container_layout.addWidget(weight_box)
 
-        # ========== 权重预设表 ==========
-        weight_box = self._create_card("五类可量化指标权重预设")
-        weight_table = QTableWidget()
-        # ... 权重表代码 ...
-
-        container_layout.addWidget(weight_box)
-
         # ========== 权重自适应机制说明 ==========
         adaptive_box = self._create_card("权重自适应机制")
         adaptive_text = QLabel(
