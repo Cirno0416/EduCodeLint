@@ -1,3 +1,4 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout,
     QLabel, QTableWidget,
@@ -57,15 +58,28 @@ class ScoreDashboard(QWidget):
         self.file_table.setSortingEnabled(True)
 
         self.file_table.setStyleSheet("""
-            QListWidget#fileTable {
-                border: 1px solid #ccc;
-                border-radius: 3px;
+            QTableWidget::item:selected {
+                background-color: #f0f0f0;    /* 背景色 */
+                color: #000000; 
+            }
+            QTableWidget::item {
+                border: none;                 /* 移除每个格子前的蓝线 */
             }
         """)
 
         # 禁止编辑
         self.file_table.setEditTriggers(
             QTableWidget.EditTrigger.NoEditTriggers
+        )
+
+        # 去掉焦点
+        self.file_table.setFocusPolicy(
+            Qt.FocusPolicy.NoFocus
+        )
+
+        # 整行选中
+        self.file_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
         )
 
         header = self.file_table.horizontalHeader()
@@ -88,6 +102,7 @@ class ScoreDashboard(QWidget):
     def update_score(self, data):
         self.analysis_data = data
         files = data.get("results", [])
+        exclude_tools = data.get("exclude_tools", [])
 
         self.file_table.setRowCount(len(files))
 
@@ -104,7 +119,7 @@ class ScoreDashboard(QWidget):
             # ===== 操作按钮 =====
             btn = QPushButton("查看分析报告")
             btn.clicked.connect(
-                lambda _, file_data=f: self.open_report(file_data)
+                lambda _, file_data=f: self.open_report(file_data, exclude_tools)
             )
             self.file_table.setCellWidget(row, 2, btn)
 
@@ -114,8 +129,8 @@ class ScoreDashboard(QWidget):
     # =============================
     # 打开单文件详细报告
     # =============================
-    def open_report(self, file_data):
-        dialog = AnalyzeReportWindow(file_data)
+    def open_report(self, file_data, exclude_tools):
+        dialog = AnalyzeReportWindow(file_data, exclude_tools)
         dialog.exec()
 
     # =============================

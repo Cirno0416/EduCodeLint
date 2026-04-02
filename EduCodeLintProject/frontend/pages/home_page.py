@@ -9,6 +9,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from backend.constant.metric_category import MetricCategory
+from frontend.components.hover_card import HoverCard
 
 
 class HomePage(QWidget):
@@ -19,7 +20,7 @@ class HomePage(QWidget):
 
     def init_ui(self):
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(60, 60, 60, 60)
+        main_layout.setContentsMargins(60, 60, 60, 30)
         main_layout.setSpacing(30)
 
         # ===== 标题 =====
@@ -39,16 +40,10 @@ class HomePage(QWidget):
 
         # ===== 样图 =====
         chart_layout = QHBoxLayout()
-        chart_layout.setSpacing(30)
         radar = self.create_demo_radar_chart()
         bar = self.create_demo_bar_chart()
         chart_layout.addWidget(self.wrap_card(radar))
         chart_layout.addWidget(self.wrap_card(bar))
-
-        # ===== 底部说明 =====
-        footer = QLabel("用于教学场景的代码质量评估与反馈系统")
-        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        footer.setStyleSheet("color: #999999;")
 
         main_layout.addStretch()
         main_layout.addWidget(title)
@@ -56,13 +51,12 @@ class HomePage(QWidget):
         main_layout.addWidget(line)
         main_layout.addStretch()
         main_layout.addLayout(chart_layout)
-        main_layout.addWidget(footer)
 
         self.setLayout(main_layout)
 
     def wrap_card(self, widget):
         """卡片包裹"""
-        frame = QFrame()
+        frame = HoverCard()
         layout = QVBoxLayout()
         layout.addWidget(widget)
         frame.setLayout(layout)
@@ -80,14 +74,14 @@ class HomePage(QWidget):
         categories = [
             MetricCategory.DOCSTRING,
             MetricCategory.CODE_SMELL,
-            MetricCategory.COMPLEXITY,
             MetricCategory.POTENTIAL_ERROR,
+            MetricCategory.COMPLEXITY,
             MetricCategory.SECURITY_VULNERABILITY,
             MetricCategory.CODE_STYLE,
         ]
         angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False)
 
-        fig = Figure(figsize=(2, 2))
+        fig = Figure(figsize=(4, 3))
         ax = fig.add_subplot(111, polar=True)
 
         # 三批次假数据
@@ -97,26 +91,31 @@ class HomePage(QWidget):
             [92, 78, 85, 82, 75, 95],
         ]
         colors = ["#2196F3", "#FF9800", "#9C27B0"]
+        lines = []
 
         for i, data in enumerate(batch_data):
             data = data + [data[0]]  # 闭合
             angle_loop = np.append(angles, angles[0])
-            ax.plot(angle_loop, data, color=colors[i], linewidth=2)
+            line, = ax.plot(angle_loop, data, color=colors[i], linewidth=2)
             ax.fill(angle_loop, data, color=colors[i], alpha=0.15)
+
+            lines.append(line)
 
         # 坐标轴标签和网格
         ax.set_xticks(angles)
-        ax.set_xticklabels([c for c in categories], fontsize=7)
+        ax.set_xticklabels([c for c in categories], fontsize=9)
         ax.set_yticks([20, 40, 60, 80, 100])
-        ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=7)
+        ax.set_yticklabels(["20", "40", "60", "80", "100"], fontsize=8)
         ax.grid(True, color="#CCCCCC", linestyle="--", linewidth=0.5)
         ax.set_ylim(0, 100)
 
         # 图例
-        ax.legend(["批次1", "批次2", "批次3"], fontsize=7, loc="upper right", bbox_to_anchor=(1.5, 1.1))
+        ax.legend(lines, ["批次1", "批次2", "批次3"], fontsize=7, loc="upper right", bbox_to_anchor=(1.2, 1.1))
+
+        ax.set_title("指标评分对比", fontsize=10, pad=15)
 
         # 留白，防止裁剪
-        fig.subplots_adjust(left=0.15, right=0.85, top=0.90, bottom=0.10)
+        fig.subplots_adjust(left=0.15, right=0.85, top=0.90, bottom=0.05)
 
         return FigureCanvas(fig)
 
@@ -137,7 +136,7 @@ class HomePage(QWidget):
         x = np.arange(len(categories))
         width = 0.25
 
-        fig = Figure(figsize=(4, 2))
+        fig = Figure(figsize=(5, 3))
         ax = fig.add_subplot(111)
 
         ax.bar(x - width, batch1, width, label="批次1")
@@ -146,9 +145,9 @@ class HomePage(QWidget):
 
         # 坐标轴文字
         ax.set_xticks(x)
-        ax.set_xticklabels([c for c in categories], fontsize=7)
+        ax.set_xticklabels([c for c in categories], fontsize=9, rotation=30)
         ax.set_yticks([0, 5, 10, 15])
-        ax.set_yticklabels(["0", "5", "10", "15"], fontsize=7)
+        ax.set_yticklabels(["0", "5", "10", "15"], fontsize=9)
 
         # 网格
         ax.grid(True, axis='y', color="#CCCCCC", linestyle="--", linewidth=0.5)
@@ -156,7 +155,9 @@ class HomePage(QWidget):
         # 图例
         ax.legend(fontsize=7, loc="upper right", bbox_to_anchor=(1.0, 1.0))
 
+        ax.set_title("平均每文件问题数", fontsize=10, pad=15)
+
         # 留白
-        fig.subplots_adjust(left=0.15, right=0.85, top=0.9, bottom=0.15)
+        fig.subplots_adjust(left=0.1, right=0.9, top=0.85, bottom=0.2)
 
         return FigureCanvas(fig)

@@ -66,7 +66,7 @@ class CompareReportWindow(QDialog):
         severity_canvas = self.create_severity_chart()
         scroll_layout.addWidget(severity_canvas)
 
-        # ================= 二级指标 =================
+        # ================= 二级指标共性问题 =================
         secondary_canvas = self.create_secondary_chart()
         if secondary_canvas:
             label = QLabel("前十共性问题")
@@ -76,7 +76,8 @@ class CompareReportWindow(QDialog):
             desc_font = QFont()
             desc_font.setPointSize(10)
             desc = QLabel("共性问题强度 = 出现频率 × 严重程度 ÷ 波动程度 \n"
-                          "值越高，说明该问题在多个批次中普遍存在、数量多且稳定，是最值得优先优化的问题。")
+                          "值越高，说明该问题在多个批次中普遍存在、数量多且稳定，是最值得优先优化的问题。\n"
+                          "只取至少在50%的批次中出现的指标。")
             desc.setFont(desc_font)
 
             scroll_layout.addWidget(desc)
@@ -222,7 +223,7 @@ class CompareReportWindow(QDialog):
 
         return self.create_multi_bar_chart(labels, values_list, "平均问题数量")
 
-    # ===== 二级指标变化 =====
+    # ===== 二级指标共性问题横向柱状图 =====
     def create_secondary_chart(self):
         common_issues = self.compare_data.get("common_issues", [])
 

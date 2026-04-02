@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from backend.db.dao.file_dao import get_files_by_analysis_id, delete_files_by_analysis_id
@@ -13,12 +14,13 @@ def insert_analysis(analysis: AnalysisDTO, conn: sqlite3.Connection):
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO analysis (id, file_count, created_at)
-        VALUES (?, ?, ?)
+        INSERT INTO analysis (id, file_count, created_at, exclude_tools)
+        VALUES (?, ?, ?, ?)
     """, (
         analysis.id,
         analysis.file_count,
-        analysis.created_at
+        analysis.created_at,
+        json.dumps(analysis.exclude_tools)
     ))
 
 
@@ -39,7 +41,7 @@ def get_analysis_by_id(analysis_id: str, conn: sqlite3.Connection) -> AnalysisVO
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, file_count, created_at, status
+        SELECT id, file_count, created_at, status, exclude_tools
         FROM analysis
         WHERE id = ?
     """, (analysis_id,))
@@ -52,7 +54,8 @@ def get_analysis_by_id(analysis_id: str, conn: sqlite3.Connection) -> AnalysisVO
         id=row[0],
         file_count=row[1],
         created_at=row[2],
-        status=row[3]
+        status=row[3],
+        exclude_tools=json.loads(row[4])
     )
 
 
@@ -86,6 +89,7 @@ def get_analysis_detail(analysis_id: str) -> dict:
             "analysis_id": analysis_id,
             "file_count": analysis.file_count,
             "results": results,
+            "exclude_tools": analysis.exclude_tools,
             "weight_config": weight_config,
             "status": analysis.status,
             "created_at": analysis.created_at
@@ -97,7 +101,7 @@ def get_analysis_list(page_size: int, offset: int) -> list[AnalysisVO]:
         cursor = conn.cursor()
 
         cursor.execute("""
-            SELECT id, file_count, created_at, status
+            SELECT id, file_count, created_at, status, exclude_tools
             FROM analysis
             WHERE status='success'
             ORDER BY created_at DESC
@@ -110,7 +114,8 @@ def get_analysis_list(page_size: int, offset: int) -> list[AnalysisVO]:
                 id=row[0],
                 file_count=row[1],
                 created_at=row[2],
-                status=row[3]
+                status=row[3],
+                exclude_tools=json.loads(row[4])
             )
             for row in rows
         ]

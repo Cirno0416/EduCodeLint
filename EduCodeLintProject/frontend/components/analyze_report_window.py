@@ -14,7 +14,7 @@ from backend.constant.metric_category import MetricCategory
 
 
 class AnalyzeReportWindow(QDialog):
-    def __init__(self, file_data):
+    def __init__(self, file_data, exclude_tools):
         super().__init__()
 
         self.file_path = file_data.get('file_path', '')
@@ -40,13 +40,6 @@ class AnalyzeReportWindow(QDialog):
         header_card = QWidget()
         header_layout = QVBoxLayout(header_card)
         header_layout.setContentsMargins(20, 15, 20, 15)
-
-        header_card.setStyleSheet("""
-            QWidget {
-                background-color: #f5f7fa;
-                border-radius: 8px;
-            }
-        """)
 
         # 文件名
         file_label = QLabel(file_data['file_path'])
@@ -79,6 +72,21 @@ class AnalyzeReportWindow(QDialog):
         header_layout.addWidget(file_label)
         header_layout.addSpacing(10)
         header_layout.addLayout(info_layout)
+
+        # =============================
+        # 排除工具信息
+        # =============================
+        exclude_text = "、".join(exclude_tools) if exclude_tools else "无"
+        exclude_label = QLabel(f"本次分析排除的工具：{exclude_text}")
+        exclude_label.setStyleSheet("""
+            QLabel {
+                font-size: 13px;
+                padding: 4px 2px;
+            }
+        """)
+        header_layout.addSpacing(5)  # 上下留点空隙
+        header_layout.addWidget(exclude_label)
+        header_layout.addSpacing(5)
 
         layout.addWidget(header_card)
 
@@ -232,17 +240,17 @@ class AnalyzeReportWindow(QDialog):
         # =============================
         # 复杂度tab显示整个函数
         # =============================
-        if category == MetricCategory.COMPLEXITY:
-            start, end = find_function_block(lines, line_no)
-
-            if start is None:
-                # fallback
-                start = max(0, line_no - 3 - 1)
-                end = min(len(lines), line_no + 3)
-        else:
+        # if category == MetricCategory.COMPLEXITY:
+        #     start, end = find_function_block(lines, line_no)
+        #
+        #     if start is None:
+        #         # fallback
+        #         start = max(0, line_no - 3 - 1)
+        #         end = min(len(lines), line_no + 3)
+        # else:
             # 普通问题
-            start = max(0, line_no - 3 - 1)
-            end = min(len(lines), line_no + 3)
+        start = max(0, line_no - 3 - 1)
+        end = min(len(lines), line_no + 3)
 
         # =============================
         # 构建显示内容

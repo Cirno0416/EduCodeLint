@@ -6,6 +6,7 @@ from frontend.pages.analyze_page import AnalyzePage
 from frontend.pages.compare_page import ComparePage
 from frontend.pages.home_page import HomePage
 from frontend.pages.record_page import RecordPage
+from frontend.pages.theory_page import TheoryPage
 
 
 class MainWindow(QMainWindow):
@@ -13,6 +14,7 @@ class MainWindow(QMainWindow):
     PAGE_ANALYZE = 1
     PAGE_COMPARE = 2
     PAGE_RECORD = 3
+    PAGE_THEORY = 4
 
     def __init__(self):
         super().__init__()
@@ -27,6 +29,7 @@ class MainWindow(QMainWindow):
         self.analyze_page = AnalyzePage()
         self.record_page = RecordPage()
         self.compare_page = ComparePage(record_page=self.record_page)
+        self.theory_page = TheoryPage()
 
         # 页面容器
         self.stack = QStackedWidget()
@@ -34,19 +37,23 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.analyze_page)
         self.stack.addWidget(self.compare_page)
         self.stack.addWidget(self.record_page)
+        self.stack.addWidget(self.theory_page)
 
         # 绑定按钮事件
         self.sidebar.btn_analysis.clicked.connect(
-            lambda: self.show_page(self.PAGE_ANALYZE)
+            lambda: self.on_nav_clicked(self.PAGE_ANALYZE, self.sidebar.btn_analysis)
         )
         self.sidebar.btn_compare.clicked.connect(
-            lambda: self.show_page(self.PAGE_COMPARE)
+            lambda: self.on_nav_clicked(self.PAGE_COMPARE, self.sidebar.btn_compare)
         )
         self.sidebar.btn_record.clicked.connect(
-            lambda: self.show_page(self.PAGE_RECORD)
+            lambda: self.on_nav_clicked(self.PAGE_RECORD, self.sidebar.btn_record)
         )
         self.sidebar.btn_home.clicked.connect(
             lambda: self.show_page(self.PAGE_HOME)
+        )
+        self.sidebar.btn_theory.clicked.connect(
+            lambda: self.on_nav_clicked(self.PAGE_THEORY, self.sidebar.btn_theory)
         )
 
         layout.addWidget(self.sidebar)
@@ -70,3 +77,7 @@ class MainWindow(QMainWindow):
             self.record_page.load_records()
         elif index == self.PAGE_COMPARE:
             self.compare_page.load_records()
+
+    def on_nav_clicked(self, page, btn):
+        self.show_page(page)
+        self.sidebar.set_active(btn)

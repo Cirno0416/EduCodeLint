@@ -27,6 +27,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             file_count INTEGER,     -- 分析的文件数量
             created_at TEXT,        -- 分析任务创建时间
+            exclude_tools TEXT,     -- 排除的工具
             status TEXT             -- 分析任务状态 (pending, success, failed)
         );
     """)

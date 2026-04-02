@@ -28,7 +28,8 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
     analysis = AnalysisDTO(
         id=analysis_id,
         file_count=len(paths),
-        created_at=datetime.now(local_tz).isoformat()
+        created_at=datetime.now(local_tz).isoformat(),
+        exclude_tools=exclude_tools
     )
 
     # 启动数据库写线程（唯一写入口）
@@ -90,6 +91,7 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
     return {
         "analysis_id": analysis_id,
         "file_count": len(results),
+        "exclude_tools": exclude_tools,
         "weight_config": prev_weights,
         "results": results,
         "status": "success"

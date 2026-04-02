@@ -97,7 +97,7 @@ def _aggregate_metrics_summary(metrics_summary, batch, analysis):
 
 
 def _calculate_common_issues(metrics_summary):
-    """全局共性问题分析（跨所有category）"""
+    """全局共性问题分析"""
     all_metric_stats = []
 
     for category, data in metrics_summary.items():
@@ -181,7 +181,14 @@ def _filter_and_sort_global_common_metrics(metric_stats):
     )
 
     # 取 Top10
-    return filtered[:10]
+    return [
+        {
+            "metric_name": m["metric_name"],
+            "category": m["category"],
+            "common_score": m["common_score"]
+        }
+        for m in filtered[:10]
+    ]
 
 
 def _calc_metric_stats(summaries: list) -> dict[str, dict[str, any]]:

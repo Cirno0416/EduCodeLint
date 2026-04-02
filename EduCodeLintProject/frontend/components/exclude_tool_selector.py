@@ -28,7 +28,7 @@ class ExcludeToolSelector(QWidget):
 
         tooltips = {
             "flake8": "用于检测代码风格问题",
-            "pylint": "用于检测代码异味问题",
+            "pylint": "主要用于检测代码异味问题，也检测部分潜在错误问题",
             "radon": "用于计算代码圈复杂度",
             "bandit": "用于检测代码安全漏洞",
             "pyright": "用于检测代码潜在错误",

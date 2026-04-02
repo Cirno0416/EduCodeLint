@@ -9,7 +9,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
-from backend.constant.metric_category import MetricCategory
+from backend.constant.metric_category import MetricCategory, CATEGORY_MAPPING
 from backend.constant.metric_name import MetricName
 from backend.constant.severity_level import SeverityLevel
 
@@ -94,9 +94,6 @@ def create_summary_cards(analysis_data):
         card.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card.setStyleSheet("""
                 QLabel {
-                    background-color: #f5f6fa;
-                    border-radius: 10px;
-                    padding: 20px;
                     font-size: 18px;
                     font-weight: bold;
                 }
@@ -106,25 +103,67 @@ def create_summary_cards(analysis_data):
     layout.addLayout(stats_layout)
 
     # ========================
-    # 权重展示
+    # 排除工具信息
+    # ========================
+    exclude_tools = analysis_data.get("exclude_tools", [])
+    exclude_text = "、".join(exclude_tools) if exclude_tools else "无"
+    exclude_label = QLabel(f"本次分析排除的工具：{exclude_text}")
+    exclude_label.setStyleSheet("""
+        QLabel {
+            font-size: 13px;
+            padding: 6px 2px;
+        }
+    """)
+
+    layout.addWidget(exclude_label)
+
+    # ========================
+    # 权重 + 平均得分展示
     # ========================
     weight_layout = QHBoxLayout()
 
+    # ===== 计算每个指标平均得分 =====
+    category_scores = {k: [] for k in weight_config.keys()}
+
+    for f in files:
+        for s in f.get("summaries", []):
+            cat = s.get("metric_category")
+            score = s.get("score")
+
+            if cat in category_scores and score is not None:
+                category_scores[cat].append(score)
+
+    # ===== 计算平均值 =====
+    category_avg = {}
+    for k, scores in category_scores.items():
+        if scores:
+            category_avg[k] = round(sum(scores) / len(scores), 2)
+        else:
+            category_avg[k] = 0
+
+    # ===== 渲染卡片 =====
     for key, weight in weight_config.items():
         percent = round(weight * 100, 1)
+        avg_score = category_avg.get(key, 0)
 
-        card = QLabel(f"{key}\n{percent}%")
+        card = QLabel(
+            f"{key}\n"
+            f"平均得分：{avg_score}\n"
+            f"权重：{percent}%"
+        )
+
         card.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card.setStyleSheet("""
-                QLabel {
-                    background-color: #ffffff;
-                    border: 1px solid #dcdde1;
-                    border-radius: 8px;
-                    padding: 15px;
-                    font-size: 14px;
-                    font-weight: bold;
-                }
-            """)
+            QLabel {
+                background-color: #ffffff;
+                border: 1px solid #dcdde1;
+                border-radius: 8px;
+                padding: 15px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+        """)
+
         weight_layout.addWidget(card)
 
     layout.addLayout(weight_layout)
@@ -136,11 +175,14 @@ def create_summary_cards(analysis_data):
 # 风格规范 / 代码异味 / 潜在错误 / 安全漏洞
 # ==================================================
 def create_general_tab(files, category):
-    figure = Figure(figsize=(6, 5), dpi=100)
+    figure = Figure(figsize=(10, 7), dpi=100)
     canvas = FigureCanvas(figure)
-    canvas.setFixedSize(650, 500)
 
-    metric_count = {}
+    # 预定义所有二级指标
+    metric_list = CATEGORY_MAPPING.get(category, [])
+    metric_count = {m: 0 for m in metric_list}
+    metric_file_map = {m: 0 for m in metric_list}
+
     severity_count = {
         SeverityLevel.HIGH: 0,
         SeverityLevel.MEDIUM: 0,
@@ -148,6 +190,8 @@ def create_general_tab(files, category):
     }
 
     for f in files:
+        appeared_metrics = set()  # 每个文件去重
+
         for s in f.get("summaries", []):
             if s.get("metric_category") != category:
                 continue
@@ -156,43 +200,45 @@ def create_general_tab(files, category):
                 metric = issue.get("metric_name", MetricName.UNKNOWN_METRIC_NAME)
                 sev = issue.get("severity", SeverityLevel.LOW)
 
-                metric_count[metric] = metric_count.get(metric, 0) + 1
+                if metric in metric_count:
+                    metric_count[metric] += 1
+                    appeared_metrics.add(metric)
+
                 if sev in severity_count:
                     severity_count[sev] += 1
 
-    # ===============================
-    # 子图1：二级指标
-    # ===============================
-    ax1 = figure.add_subplot(211)
+        # ===== 每个文件只计一次 =====
+        for metric in appeared_metrics:
+            metric_file_map[metric] = metric_file_map.get(metric, 0) + 1
 
-    # 按照问题数量排序，问题多的指标排在上面
+    # ===============================
+    # 子图1：问题数量
+    # ===============================
+    ax1 = figure.add_subplot(221)
+
     sorted_metric_count = dict(
-        sorted(
-            metric_count.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        sorted(metric_count.items(), key=lambda x: x[1], reverse=True)
     )
 
     draw_horizontal_bar_chart(
         ax=ax1,
         data_dict=sorted_metric_count,
-        title="二级指标数量",
+        title="二级指标问题数量",
         xlabel="问题数量"
     )
 
     # ===============================
-    # 子图2：严重度比例
+    # 子图2：严重度
     # ===============================
-    ax2 = figure.add_subplot(212)
+    ax2 = figure.add_subplot(222)
 
-    total = sum(severity_count.values())
+    total = sum(severity_count.values()) or 1
 
     severity_list = [SeverityLevel.LOW, SeverityLevel.MEDIUM, SeverityLevel.HIGH]
     color_map = {
-        SeverityLevel.LOW: "#5CB85C",       # 绿色
-        SeverityLevel.MEDIUM: "#F0AD4E",    # 橙色
-        SeverityLevel.HIGH: "#D9534F"       # 红色
+        SeverityLevel.LOW: "#5CB85C",
+        SeverityLevel.MEDIUM: "#F0AD4E",
+        SeverityLevel.HIGH: "#D9534F"
     }
 
     severity_display = {}
@@ -205,19 +251,38 @@ def create_general_tab(files, category):
     draw_horizontal_bar_chart(
         ax=ax2,
         data_dict=severity_display,
-        title="严重度比例",
+        title="严重度分布",
         xlabel="问题数量",
         invert_y=False,
         colors=[color_map[k] for k in severity_list]
     )
 
-    # 固定布局，不自动缩放
+    # ===============================
+    # 子图3：文件数量
+    # ===============================
+    ax3 = figure.add_subplot(223)
+
+    sorted_file_map = dict(
+        sorted(metric_file_map.items(), key=lambda x: x[1], reverse=True)
+    )
+
+    draw_horizontal_bar_chart(
+        ax=ax3,
+        data_dict=sorted_file_map,
+        title="涉及文件数量",
+        xlabel="文件数量"
+    )
+
+    # ===============================
+    # 布局
+    # ===============================
     figure.subplots_adjust(
-        left=0.30,
+        left=0.15,
         right=0.95,
-        top=0.92,
-        bottom=0.08,
-        hspace=0.4
+        top=0.9,
+        bottom=0.1,
+        hspace=0.5,
+        wspace=0.3
     )
 
     return canvas
@@ -229,7 +294,6 @@ def create_general_tab(files, category):
 def create_complexity_tab(files):
     figure = Figure(figsize=(6, 4), dpi=100)
     canvas = FigureCanvas(figure)
-    canvas.setFixedSize(650, 450)
 
     complexity_values = []
 
@@ -253,7 +317,7 @@ def create_complexity_tab(files):
         if not found:
             complexity_values.append(10)
 
-    ax = figure.add_subplot(111)
+    ax = figure.add_subplot(121)
 
     # 基础分箱
     bins = [0, 11, 16, 21, 26, 31, 36]
@@ -302,10 +366,10 @@ def create_complexity_tab(files):
     ax.grid(axis='y', linestyle='--', alpha=0.5)
 
     figure.subplots_adjust(
-        left=0.30,
+        left=0.1,
         right=0.95,
         top=0.9,
-        bottom=0.12
+        bottom=0.15
     )
 
     return canvas
@@ -315,47 +379,75 @@ def create_complexity_tab(files):
 # 注释与文档
 # ==================================================
 def create_docstring_tab(files):
-    figure = Figure(figsize=(6, 5), dpi=100)
+    figure = Figure(figsize=(6, 6), dpi=100)
     canvas = FigureCanvas(figure)
-    canvas.setFixedSize(650, 500)
 
-    metric_count = {
-        MetricName.STANDARD_DOCSTRING: 0,
-        MetricName.NONSTANDARD_DOCSTRING: 0,
-        MetricName.MISSING_MODULE_DOCSTRING: 0,
-    }
+    metric_list = CATEGORY_MAPPING.get(MetricCategory.DOCSTRING, [])
+    # ===== 问题统计 =====
+    metric_issue_count = {m: 0 for m in metric_list}
+
+    # ===== 文件统计 =====
+    metric_file_count = {m: 0 for m in metric_list}
 
     for f in files:
-        found = False
+        appeared_metrics = set()
+        has_doc_issue = False
+
         for s in f.get("summaries", []):
             if s.get("metric_category") != MetricCategory.DOCSTRING:
                 continue
 
             for issue in s.get("issues", []):
                 metric = issue.get("metric_name", MetricName.UNKNOWN_METRIC_NAME)
-                metric_count[metric] = metric_count[metric] + 1
-                found = True
-                break  # 每个文件同一指标只计数一次
 
-        if not found:
-            metric_count[MetricName.STANDARD_DOCSTRING] = metric_count[MetricName.STANDARD_DOCSTRING] + 1
+                # ===== 问题统计 =====
+                if metric in metric_issue_count:
+                    metric_issue_count[metric] += 1
 
-    ax = figure.add_subplot(211)
+                # ===== 文件统计 =====
+                appeared_metrics.add(metric)
+                has_doc_issue = True
+
+        # ===== 文件级统计 =====
+        if not has_doc_issue:
+            # 没问题 → 标准docstring
+            metric_file_count[MetricName.STANDARD_DOCSTRING] += 1
+        else:
+            for metric in appeared_metrics:
+                if metric in metric_file_count:
+                    metric_file_count[metric] += 1
+
+    # ===============================
+    # 图1：问题数量
+    # ===============================
+    ax1 = figure.add_subplot(211)
 
     draw_horizontal_bar_chart(
-        ax=ax,
-        data_dict=metric_count,
-        title="注释情况统计",
+        ax=ax1,
+        data_dict=metric_issue_count,
+        title="Docstring问题数量",
+        xlabel="问题数量",
+    )
+
+    # ===============================
+    # 图2：文件数量
+    # ===============================
+    ax2 = figure.add_subplot(212)
+
+    draw_horizontal_bar_chart(
+        ax=ax2,
+        data_dict=metric_file_count,
+        title="Docstring涉及文件数量",
         xlabel="文件数量",
     )
 
-    # 固定布局，不自动缩放
+    # 布局
     figure.subplots_adjust(
-        left=0.30,
-        right=0.95,
-        top=0.92,
-        bottom=0.08,
-        hspace=0.4
+        left=0.15,
+        right=0.7,
+        top=0.9,
+        bottom=0.1,
+        hspace=0.5
     )
 
     return canvas
@@ -391,6 +483,8 @@ def draw_horizontal_bar_chart(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(labels)
 
+    ax.set_xlim(left=0)
+
     # 处理单柱情况
     if len(labels) == 1:
         ax.set_ylim(-0.8, 0.8)
@@ -399,8 +493,15 @@ def draw_horizontal_bar_chart(
 
     max_value = max(values)
 
+    # 设置x轴范围，处理全零的情况
+    if max_value == 0:
+        # 所有值都是0，设置范围为[0, 1]避免警告
+        ax.set_xlim(0, 1)
+    else:
+        # 有非零值，留15%的空白
+        ax.set_xlim(0, max_value * 1.15)
+
     # 留白
-    ax.set_xlim(0, max_value * 1.15)
     ax.set_ymargin(0.1)
 
     offset = ax.get_xlim()[1] * 0.01

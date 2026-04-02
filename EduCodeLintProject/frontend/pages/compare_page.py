@@ -6,7 +6,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget,
-    QTableWidgetItem, QHeaderView, QListWidget, QListWidgetItem
+    QTableWidgetItem, QHeaderView, QListWidget, QListWidgetItem, QSizePolicy
 )
 
 from frontend.components.pagination import Pagination
@@ -38,11 +38,8 @@ class ComparePage(QWidget):
 
         self.compare_data = None
 
-        layout = QVBoxLayout(self)
-
         title = QLabel("批次对比")
         title.setObjectName("pageTitle")
-        layout.addWidget(title)
 
         # =============================
         # 表格
@@ -50,17 +47,47 @@ class ComparePage(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(
-            ["批次ID", "文件数量", "创建时间", "选择"]
+            ["批次ID", "文件数量", "创建时间", "操作"]
+        )
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table.setStyleSheet("""
+            QTableWidget::item:selected {
+                background-color: #f0f0f0;    /* 背景色 */
+                color: #000000; 
+            }
+            QTableWidget::item {
+                border: none;                 /* 移除每个格子前的蓝线 */
+            }
+            QHeaderView::section {
+                font-weight: bold;
+                font-size: 10pt;
+            }
+        """)
+
+        # 禁止编辑
+        self.table.setEditTriggers(
+            QTableWidget.EditTrigger.NoEditTriggers
         )
 
-        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        # 去掉焦点
+        self.table.setFocusPolicy(
+            Qt.FocusPolicy.NoFocus
+        )
+
+        # 整行选中
+        self.table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+
+        # 一次只选中一行
+        self.table.setSelectionMode(
+            QTableWidget.SelectionMode.SingleSelection
+        )
 
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-
-        layout.addWidget(self.table)
 
         # =============================
         # 分页
@@ -69,26 +96,25 @@ class ComparePage(QWidget):
         self.pagination.page_changed.connect(self.on_page_changed)
         self.pagination.page_size_changed.connect(self.on_page_size_changed)
 
-        layout.addWidget(self.pagination)
-
         # =============================
         # 选中列表 + 按钮
         # =============================
-        bottom_layout = QHBoxLayout()
-
         label_font = QFont()
         label_font.setPointSize(12)
         label_font.setBold(True)
 
         # 列表展示选择批次ID
         # 标题
-        self.selection_title = QLabel("已选择批次：")
+        self.selection_title = QLabel(f"已选择批次")
         self.selection_title.setFont(label_font)
 
         # 列表
         self.selection_list = QListWidget()
-        self.selection_list.setFixedHeight(250)     # 固定高度
+        self.selection_list.setFixedHeight(200)     # 固定高度
         self.selection_list.setMinimumWidth(500)    # 最小宽度
+        self.selection_list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self.selection_list.setStyleSheet("""
             QListWidget {
                 border: 1px solid #ddd;
@@ -96,9 +122,6 @@ class ComparePage(QWidget):
                 padding: 4px;
             }
         """)
-        self.selection_list.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
 
         selection_layout = QVBoxLayout()
         selection_layout.addWidget(self.selection_title)
@@ -113,11 +136,13 @@ class ComparePage(QWidget):
         self.btn_compare = QPushButton("对比选中批次")
         self.btn_compare.setFont(btn_font)
         self.btn_compare.clicked.connect(self.compare_selected)
+        self.btn_compare.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
 
         self.btn_report = QPushButton("查看对比分析报告")
         self.btn_report.setFont(btn_font)
         self.btn_report.setEnabled(False)
         self.btn_report.clicked.connect(self.open_report)
+        self.btn_report.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
 
         # 分析状态
         self.status_label = QLabel("尚未进行对比")
@@ -128,18 +153,22 @@ class ComparePage(QWidget):
         status_layout.addStretch()
         status_layout.addWidget(self.status_label)
 
-
         btn_layout = QVBoxLayout()
-        btn_layout.addWidget(self.btn_compare)
+        btn_layout.addWidget(self.btn_compare, alignment=Qt.AlignmentFlag.AlignRight)
         btn_layout.addSpacing(20)
-        btn_layout.addWidget(self.btn_report)
+        btn_layout.addWidget(self.btn_report, alignment=Qt.AlignmentFlag.AlignRight)
         btn_layout.addSpacing(30)
         btn_layout.addLayout(status_layout)
 
+        bottom_layout = QHBoxLayout()
         bottom_layout.addLayout(selection_layout)
         bottom_layout.addStretch()
         bottom_layout.addLayout(btn_layout)
 
+        layout = QVBoxLayout(self)
+        layout.addWidget(title)
+        layout.addWidget(self.table, stretch=1)
+        layout.addWidget(self.pagination)
         layout.addSpacing(30)
         layout.addLayout(bottom_layout)
 
@@ -231,6 +260,10 @@ class ComparePage(QWidget):
         if existing:
             self.selected_analyses.remove(existing)
         else:
+            if len(self.selected_analyses) >= 5:
+                DialogUtil.warning(self, "最多只能选择5个批次")
+                return
+
             self.selected_analyses.append({
                 "id": analysis_id,
                 "created_at": created_at,

@@ -7,17 +7,6 @@ QMainWindow {
     font-weight: bold;
 }
 
-QPushButton {
-    background-color: #2f80ed;
-    color: white;
-    border-radius: 6px;
-    padding: 6px;
-}
-
-QPushButton:hover {
-    background-color: #1c60c0;
-}
-
 QListWidget {
     background-color: white;
     border-radius: 6px;

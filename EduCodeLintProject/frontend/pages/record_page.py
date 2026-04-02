@@ -72,11 +72,15 @@ class RecordPage(QWidget):
 
         self.table.setStyleSheet("""
             QTableWidget::item:selected {
-                background-color: #3399FF;    /* 高亮背景色 */
-                color: white;                 /* 高亮文字颜色 */
+                background-color: #f0f0f0;    /* 背景色 */
+                color: #000000; 
             }
             QTableWidget::item {
                 border: none;                 /* 移除每个格子前的蓝线 */
+            }
+            QHeaderView::section {
+                font-weight: bold;
+                font-size: 10pt;
             }
         """)
 
@@ -87,11 +91,6 @@ class RecordPage(QWidget):
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-
-        font = QFont()
-        font.setBold(True)
-        font.setPointSize(10)
-        header.setFont(font)
 
         layout.addWidget(self.table)
 

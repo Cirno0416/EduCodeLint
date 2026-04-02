@@ -92,6 +92,35 @@ class AnalyzePage(QWidget):
         label.setFont(label_font)
         weights_header_layout.addWidget(label)
 
+        # 问号提示
+        help_label = QLabel("?")
+        help_label.setFont(btn_font)
+        help_label.setFixedSize(18, 18)
+        help_label.setStyleSheet("""
+            QLabel {
+                color: #555;
+                border: 1px solid #ccc;
+                border-radius: 9px;
+                background-color: #f5f5f5;
+                font-size: 12px;
+                font-family: Arial;
+                padding-left: 1px;
+            }
+        """)
+
+        help_label.setToolTip(
+            "注释指标不参与权重计算。\n\n"
+            "原因：\n"
+            "1. 注释不影响程序运行\n"
+            "2. 更适合作为教学辅助指标\n"
+            "3. 采用“约束项扣分”机制：\n"
+            "   · 无Docstring：扣分\n"
+            "   · 不规范Docstring：轻微扣分\n"
+            "   · 规范Docstring：不扣分"
+        )
+
+        weights_header_layout.addWidget(help_label)
+
         # 占位，把按钮推到右侧
         weights_header_layout.addStretch()
 
@@ -225,9 +254,6 @@ class AnalyzePage(QWidget):
 
     def reset_weights(self):
         """重置权重为默认配置"""
-        # 禁用重置按钮，防止重复点击
-        self.btn_reset_weights.setEnabled(False)
-
         reset = DialogUtil.question(self, "确定要重置权重为默认值吗？", "重置权重确认")
         if not reset:
             return
@@ -252,7 +278,6 @@ class AnalyzePage(QWidget):
     def on_reset_weights_finished(self, result):
         if result.get("code") != 0:
             DialogUtil.error(self, result.get("msg", "重置权重失败"))
-            self.btn_reset_weights.setEnabled(True)
             return
 
         # 重置成功后，重新获取最新的权重配置
@@ -260,9 +285,6 @@ class AnalyzePage(QWidget):
 
         # 重新获取权重更新界面
         self.get_weights()
-
-        # 恢复按钮
-        self.btn_reset_weights.setEnabled(True)
 
     def run_analysis(self):
         if not self.selected_files:
