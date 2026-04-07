@@ -72,9 +72,6 @@ class MetricName:
     # 不规范的Docstring
     NONSTANDARD_DOCSTRING = "不规范的Docstring"
 
-    # 规范的Docstring（这个不算问题，仅用来统计数据）
-    STANDARD_DOCSTRING = "规范的Docstring"
-
     # ===== 异常情况 =====
 
     # 未知指标名称

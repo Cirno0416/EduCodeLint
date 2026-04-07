@@ -52,7 +52,6 @@ CATEGORY_MAPPING = {
         MetricName.CYCLOMATIC_COMPLEXITY,
     ],
     MetricCategory.DOCSTRING: [
-        MetricName.STANDARD_DOCSTRING,
         MetricName.NONSTANDARD_DOCSTRING,
         MetricName.MISSING_MODULE_DOCSTRING,
     ]
