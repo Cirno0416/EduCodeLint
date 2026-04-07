@@ -65,7 +65,8 @@ class Sidebar(QWidget):
 
     def set_active(self, btn):
         """设置当前激活的按钮样式"""
-        for b in [self.btn_analysis, self.btn_compare, self.btn_record, self.btn_theory]:
+        btn_list = [self.btn_analysis, self.btn_compare, self.btn_record, self.btn_theory]
+        for b in btn_list:
             b.setStyleSheet("""
                 QPushButton {
                     color: #ecf0f1;
@@ -74,11 +75,13 @@ class Sidebar(QWidget):
                 }
             """)
 
-        btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4A90E2;
-                color: white;
-                padding: 10px 15px;
-                border-radius: 6px;
-            }
-        """)
+        # home 按钮特殊处理
+        if btn in btn_list:
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #4A90E2;
+                    color: white;
+                    padding: 10px 15px;
+                    border-radius: 6px;
+                }
+            """)

@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
             lambda: self.on_nav_clicked(self.PAGE_RECORD, self.sidebar.btn_record)
         )
         self.sidebar.btn_home.clicked.connect(
-            lambda: self.show_page(self.PAGE_HOME)
+            lambda: self.on_nav_clicked(self.PAGE_HOME, self.sidebar.btn_home)
         )
         self.sidebar.btn_theory.clicked.connect(
             lambda: self.on_nav_clicked(self.PAGE_THEORY, self.sidebar.btn_theory)
