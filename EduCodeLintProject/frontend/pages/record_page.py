@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout,
     QLabel, QTableWidget,
     QTableWidgetItem,
-    QHeaderView, QPushButton, QMessageBox
+    QHeaderView, QPushButton
 )
 
 from frontend.components.pagination import Pagination
@@ -41,7 +41,10 @@ class RecordPage(QWidget):
         layout = QVBoxLayout()
 
         title = QLabel("历史分析记录")
-        title.setObjectName("pageTitle")
+        font = QFont()
+        font.setPointSize(18)
+        font.setBold(True)
+        title.setFont(font)
         layout.addWidget(title)
 
         # ==============================

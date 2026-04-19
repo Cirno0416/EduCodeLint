@@ -16,7 +16,7 @@ def analyze_single():
     exclude_tools = data.get("exclude_tools", [])
 
     if not path:
-        return error("Path is required")
+        return error("请至少上传一个文件")
 
     result = analyze_files(
         paths=[path],
@@ -36,7 +36,7 @@ def analyze_multiple():
     exclude_tools = data.get("exclude_tools", [])
 
     if not paths:
-        return error("Paths cannot be empty")
+        return error("请至少上传一个文件")
 
     result = analyze_files(
         paths=paths,

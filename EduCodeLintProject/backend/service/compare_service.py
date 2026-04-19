@@ -145,22 +145,25 @@ def _calculate_metric_stats(metric_values_map, total_batches, category):
 
     for metric_name, values in metric_values_map.items():
         appear_count = sum(1 for v in values if v > 0)
-        support = appear_count / total_batches
 
-        mean_val = sum(values) / total_batches
+        # 出现频率：问题出现的文件数占总文件数的比例
+        frequency = appear_count / total_batches
 
-        variance = sum((v - mean_val) ** 2 for v in values) / total_batches
-        std_val = math.sqrt(variance)
+        # 问题密度：平均每文件的问题数量
+        density = sum(values) / total_batches
+
+        variance = sum((v - density) ** 2 for v in values) / total_batches
+        sigma = math.sqrt(variance)
 
         # 计算公式
-        common_score = support * mean_val / (1 + std_val)
+        common_score = frequency * density / (1 + sigma)
 
         stats.append({
             "metric_name": metric_name,
             "category": category,
-            "support": round(support, 2),
-            "mean": round(mean_val, 2),
-            "std": round(std_val, 2),
+            "frequency": round(frequency, 2),
+            "mean": round(density, 2),
+            "std": round(sigma, 2),
             "common_score": round(common_score, 2)
         })
 

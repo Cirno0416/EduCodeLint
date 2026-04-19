@@ -39,7 +39,10 @@ class ComparePage(QWidget):
         self.compare_data = None
 
         title = QLabel("批次对比")
-        title.setObjectName("pageTitle")
+        font = QFont()
+        font.setPointSize(18)
+        font.setBold(True)
+        title.setFont(font)
 
         # =============================
         # 表格
@@ -118,6 +121,7 @@ class ComparePage(QWidget):
         self.selection_list.setStyleSheet("""
             QListWidget {
                 border: 1px solid #ddd;
+                background-color: white;
                 border-radius: 6px;
                 padding: 4px;
             }

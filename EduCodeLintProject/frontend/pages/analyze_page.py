@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtCore import QThread, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
@@ -26,7 +28,10 @@ class AnalyzePage(QWidget):
         layout = QVBoxLayout()
 
         title = QLabel("代码分析")
-        title.setObjectName("pageTitle")
+        font = QFont()
+        font.setPointSize(18)
+        font.setBold(True)
+        title.setFont(font)
         layout.addWidget(title)
 
         # ==============================
@@ -78,6 +83,8 @@ class AnalyzePage(QWidget):
             QListWidget#fileList {
                 border: 1px solid #ccc;
                 border-radius: 3px;
+                background-color: white;
+                border-radius: 6px;
             }
         """)
         file_section.addWidget(self.file_list)
@@ -291,6 +298,12 @@ class AnalyzePage(QWidget):
             DialogUtil.warning(self, "请先选择文件")
             return
 
+        self.invalid_check()
+        # 如果检查后没有有效文件了，停止分析
+        if not self.selected_files:
+            DialogUtil.warning(self, "没有有效的文件可分析")
+            return
+
         exclude_tools = self.exclude_tool_selector.get_selected()
 
         # 禁用按钮
@@ -320,6 +333,29 @@ class AnalyzePage(QWidget):
         self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
+
+    def invalid_check(self):
+        invalid_files = []
+        for file_path in self.selected_files:
+            if not os.path.isfile(file_path):
+                invalid_files.append(file_path)
+
+        if invalid_files:
+            # 从已选列表中移除不存在的文件
+            for file_path in invalid_files:
+                self.selected_files.remove(file_path)
+
+            # 刷新文件列表
+            self.refresh_file_list()
+
+            # 构建提示信息
+            if len(invalid_files) == 1:
+                message = f"文件 '{os.path.basename(invalid_files[0])}' 已不存在，已从列表中移除。"
+            else:
+                file_names = [os.path.basename(f) for f in invalid_files]
+                message = f"以下 {len(invalid_files)} 个文件已不存在，已从列表中移除：\n" + "\n".join(file_names)
+
+            DialogUtil.warning(self, message)
 
     def on_analysis_finished(self, result):
         main_window = self.window()

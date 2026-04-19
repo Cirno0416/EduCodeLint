@@ -25,9 +25,11 @@ local_tz = pytz.timezone('Asia/Shanghai')
 def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
     analysis_id = _generate_analysis_id()
 
+    valid_file_count = _count_valid_files(paths)
+
     analysis = AnalysisDTO(
         id=analysis_id,
-        file_count=len(paths),
+        file_count=valid_file_count,
         created_at=datetime.now(local_tz).isoformat(),
         exclude_tools=exclude_tools
     )
@@ -46,7 +48,7 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
     results = []
     all_summaries: list[MetricSummaryDTO] = []
 
-    max_workers = min(8, os.cpu_count() or 1)
+    max_workers = min(16, os.cpu_count() or 1)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
@@ -63,8 +65,8 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
             result = future.result()
             results.append(result)
 
-            # 收集每个文件的 summaries
-            if result.get("summaries"):
+            # 收集每个有效文件的 summaries
+            if result.get("status") == "success" and result.get("summaries"):
                 all_summaries.extend(result["summaries"])
 
     # 更新权重
@@ -90,7 +92,7 @@ def analyze_files(paths: list[str], exclude_tools: list[str]) -> dict:
 
     return {
         "analysis_id": analysis_id,
-        "file_count": len(results),
+        "file_count": valid_file_count,
         "exclude_tools": exclude_tools,
         "weight_config": prev_weights,
         "results": results,
@@ -150,6 +152,15 @@ def _analyze_one_file(
             "error": str(e),
             "summaries": []
         }
+
+
+def _count_valid_files(paths: list[str]) -> int:
+    """计算有效的Python文件数量"""
+    count = 0
+    for path in paths:
+        if path and os.path.isfile(path) and path.endswith(".py"):
+            count += 1
+    return count
 
 
 def _generate_analysis_id() -> str:

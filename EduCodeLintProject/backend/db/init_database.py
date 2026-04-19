@@ -1,8 +1,15 @@
 import sqlite3
 import os
+import sys
 
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+def get_exe_dir():
+    if hasattr(sys, 'executable'):
+        return os.path.dirname(sys.executable)
+    return os.getcwd()
+
+
+BASE_DIR = get_exe_dir()
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.path.join(DATA_DIR, "ECL_code_quality.db")
 
@@ -89,15 +96,6 @@ def init_db():
             weight REAL NOT NULL,
             weighted_error REAL NOT NULL,   -- 该轮的 E_k 值
             created_at TEXT NOT NULL
-        );
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS comparison (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            created_at TEXT,        -- 对比任务创建时间
-            analysis_id_1 TEXT,     -- 进行对比的批次 1
-            analysis_id_2 TEXT      -- 进行对比的批次 2
         );
     """)
 

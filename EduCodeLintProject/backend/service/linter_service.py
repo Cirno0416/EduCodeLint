@@ -1,10 +1,43 @@
 import json
+import os
 import re
 import subprocess
 import logging
 
 from backend.constant.config_path import ConfigPath
 from backend.constant.tool_name import ToolName
+
+
+# 添加隐藏窗口常量
+CREATE_NO_WINDOW = 0x08000000
+
+
+def _run_cmd_hidden(cmd):
+    """运行命令并隐藏窗口"""
+    try:
+        if os.name == 'nt':
+            process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+                creationflags=CREATE_NO_WINDOW
+            )
+        else:
+            process = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+            )
+        return process
+    except Exception as e:
+        logging.error(f"命令执行失败: {cmd}, 错误: {e}")
+        return None
 
 
 def run_linters(file_path: str, exclude_tools: list = None) -> dict:
@@ -42,12 +75,7 @@ def _run_pylint(file_path: str) -> list:
         '--score=no'
     ]
 
-    process = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    process = _run_cmd_hidden(cmd)
 
     if process.stderr:
         logging.error(f"Pylint 错误输出: {process.stderr}")
@@ -73,12 +101,7 @@ def _run_flake8(file_path: str) -> list:
         '--exit-zero'
     ]
 
-    process = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    process = _run_cmd_hidden(cmd)
 
     if process.stderr:
         logging.error(f"Flake8 错误输出: {process.stderr}")
@@ -104,12 +127,7 @@ def _run_bandit(file_path: str) -> list:
         '--quiet'
     ]
 
-    process = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    process = _run_cmd_hidden(cmd)
 
     if process.stderr:
         logging.error(f"Bandit 错误输出: {process.stderr}")
@@ -136,12 +154,7 @@ def _run_radon(file_path: str) -> list:
         '-s'
     ]
 
-    process = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    process = _run_cmd_hidden(cmd)
 
     if process.stderr:
         logging.error(f"Radon 错误输出: {process.stderr}")
@@ -209,14 +222,7 @@ def _run_pyright(file_path: str) -> list:
         '--outputjson'
     ]
 
-    process = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace"
-    )
+    process = _run_cmd_hidden(cmd)
 
     if process.stderr:
         logging.error(f"Pyright 错误输出: {process.stderr}")
@@ -239,12 +245,7 @@ def _run_pydocstyle(file_path: str) -> list:
         '--config', ConfigPath.PYDOCSTYLE_CONFIG
     ]
 
-    process = subprocess.run(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    process = _run_cmd_hidden(cmd)
 
     if process.stderr:
         logging.error(f"Pydocstyle 错误输出: {process.stderr}")
