@@ -161,7 +161,7 @@ def _calculate_metric_stats(metric_values_map, total_batches, category):
         stats.append({
             "metric_name": metric_name,
             "category": category,
-            "frequency": round(frequency, 2),
+            "support": round(frequency, 2),
             "mean": round(density, 2),
             "std": round(sigma, 2),
             "common_score": round(common_score, 2)
